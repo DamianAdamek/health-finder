@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # --- BACKEND (NestJS) ---
+  api:
+    build:
+      context: ./backend      # <--- ZMIANA: Wskazujemy folder backendu
+      dockerfile: Dockerfile
+    container_name: gym-backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/usr/src/app              # <--- ZMIANA: Mapujemy folder backendu
+      - /usr/src/app/node_modules
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+    depends_on:
+      - postgres
+    networks:
+      - gym-network
+
+  # --- BAZA DANYCH (PostgreSQL) ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: gym-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gym-network
+
+  # --- FRONTEND (Przyszłość) ---
+  # web:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8080:80"
+  #   depends_on:
+  #     - api
+  #   networks:
+  #     - gym-network
+
+volumes:
+  postgres_data:
+
+networks:
+  gym-network:
