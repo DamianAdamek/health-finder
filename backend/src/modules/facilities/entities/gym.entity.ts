@@ -1,7 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Location } from './location.entity';
 import { Room } from './room.entity';
-import { IsNotEmpty, IsString } from 'class-validator';
 
 @Entity('gyms')
 export class Gym {
@@ -9,16 +8,12 @@ export class Gym {
     gymId: number;
 
     @Column({ length: 100 })
-    @IsString()
-    @IsNotEmpty()
     name: string;
 
     @Column('text', { nullable: true })
-    @IsString()
     description?: string;
 
     @Column('text', { nullable: true })
-    @IsString()
     rules?: string;
 
     @OneToOne(() => Location, { cascade: true, eager: true })

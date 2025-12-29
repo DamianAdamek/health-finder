@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
 import { Gym } from './gym.entity';
-import { IsNotEmpty, IsString, IsInt, Min } from 'class-validator';
 
 @Entity('rooms')
 export class Room {
@@ -8,13 +7,9 @@ export class Room {
     roomId: number;
 
     @Column({ length: 100 })
-    @IsString()
-    @IsNotEmpty()
     name: string;
 
     @Column()
-    @IsInt()
-    @Min(1, { message: 'Capacity must be at least 1' })
     capacity: number;
 
     @ManyToOne(() => Gym, (gym) => gym.rooms, { onDelete: 'CASCADE', eager: true })
