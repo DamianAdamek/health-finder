@@ -2,7 +2,9 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { SchedulingService } from './scheduling.service';
 import { CreateSchedulingDto } from './dto/create-scheduling.dto';
 import { UpdateSchedulingDto } from './dto/update-scheduling.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Scheduling')
 @Controller('scheduling')
 export class SchedulingController {
   constructor(private readonly schedulingService: SchedulingService) {}

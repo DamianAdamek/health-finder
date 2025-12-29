@@ -2,7 +2,9 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { EngagementService } from './engagement.service';
 import { CreateEngagementDto } from './dto/create-engagement.dto';
 import { UpdateEngagementDto } from './dto/update-engagement.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Engagement')
 @Controller('engagement')
 export class EngagementController {
   constructor(private readonly engagementService: EngagementService) {}
