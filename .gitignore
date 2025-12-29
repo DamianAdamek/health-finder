@@ -1,24 +1,46 @@
-# Nestjs specific
-/dist
-/node_modules
-/build
-/tmp
-
-# Logs
-logs
-*.log
+# --- Dependencies ---
+node_modules/
 npm-debug.log*
-pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
+pnpm-debug.log*
 
-# dotenv environment variable files
+# --- NestJS / Compilation ---
+# Folder, gdzie ląduje skompilowany kod JS (nie wrzucamy tego do repo)
+/dist
+
+# --- Environment Variables (CRITICAL) ---
+# NIGDY nie wrzucaj plików z hasłami do repozytorium!
 .env
 .env.development
 .env.test
 .env.production
+.env.local
 
-# temp directory
-.temp
-.tmp
+# --- Testing ---
+/coverage
+/test/e2e/**/*.js
+/test/e2e/**/*.js.map
+
+# --- IDE / Editors ---
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+
+# IntelliJ / WebStorm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# --- OS System Files ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Documentation ---
+# Jeśli generujesz dokumentację (np. Compodoc)
+/documentation
