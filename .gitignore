@@ -7,7 +7,7 @@ pnpm-debug.log*
 
 # --- NestJS / Compilation ---
 # Folder, gdzie ląduje skompilowany kod JS (nie wrzucamy tego do repo)
-/dist
+dist/
 
 # --- Environment Variables (CRITICAL) ---
 # NIGDY nie wrzucaj plików z hasłami do repozytorium!
