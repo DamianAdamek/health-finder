@@ -1,0 +1,7 @@
+export enum ActivityLevel {
+    VERY_HIGH = 'Very High',
+    HIGH = 'High',
+    MEDIUM = 'Medium',
+    LOW = 'Low',
+    VERY_LOW = 'Very Low',
+}
