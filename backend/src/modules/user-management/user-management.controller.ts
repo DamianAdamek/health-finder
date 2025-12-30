@@ -1,36 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UserManagementService } from './user-management.service';
-import { CreateUserManagementDto } from './dto/create-user-management.dto';
-import { UpdateUserManagementDto } from './dto/update-user-management.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { CreateUserDto } from './dto/create-user.dto';
+import { CreateTrainerDto } from './dto/create-trainer.dto';
+import { LoginDto } from './dto/login.dto';
 
-@ApiTags('User-management')
-@Controller('user-management')
+@ApiTags('Auth')
+@Controller('auth')
 export class UserManagementController {
-  constructor(private readonly userManagementService: UserManagementService) {}
+  constructor(private readonly userService: UserManagementService) {}
 
-  @Post()
-  create(@Body() createUserManagementDto: CreateUserManagementDto) {
-    return this.userManagementService.create(createUserManagementDto);
+  @Post('register/client')
+  @ApiOperation({ summary: 'Register a new Client' })
+  registerClient(@Body() dto: CreateUserDto) {
+    return this.userService.registerClient(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.userManagementService.findAll();
+  @Post('register/trainer')
+  @ApiOperation({ summary: 'Register a new Trainer' })
+  registerTrainer(@Body() dto: CreateTrainerDto) {
+    return this.userService.registerTrainer(dto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userManagementService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserManagementDto: UpdateUserManagementDto) {
-    return this.userManagementService.update(+id, updateUserManagementDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userManagementService.remove(+id);
+  @Post('login')
+  @ApiOperation({ summary: 'User Login' })
+  login(@Body() dto: LoginDto) {
+    return this.userService.login(dto);
   }
 }
