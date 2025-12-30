@@ -16,8 +16,11 @@ export class Gym {
     @Column('text', { nullable: true })
     rules?: string;
 
+    @Column()
+    locationId: number;
+
     @OneToOne(() => Location, { cascade: true, eager: true })
-    @JoinColumn()
+    @JoinColumn({ name: 'locationId' })
     location: Location;
 
     @OneToMany(() => Room, (room) => room.gym, { cascade: true, eager: true })

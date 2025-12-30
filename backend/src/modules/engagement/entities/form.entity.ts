@@ -25,6 +25,9 @@ export class Form {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column()
+  clientId: number;
+
   @ManyToOne(() => Client, { eager: true })
   @JoinColumn({ name: 'clientId' })
   client: Client;

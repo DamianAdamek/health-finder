@@ -1,5 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { } from 'class-validator';
 import { Client } from '../../user-management/entities/client.entity';
 import { Trainer } from '../../user-management/entities/trainer.entity';
 
@@ -19,6 +18,12 @@ export class Opinion {
 
     @UpdateDateColumn()
     updatedAt: Date;
+
+    @Column()
+    clientId: number;
+
+    @Column()
+    trainerId: number;
 
     @ManyToOne(() => Client, { eager: true })
     @JoinColumn({ name: 'clientId' })
