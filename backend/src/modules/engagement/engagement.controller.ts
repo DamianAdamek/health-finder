@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { EngagementService } from './engagement.service';
-import { CreateEngagementDto } from './dto/create-engagement.dto';
-import { UpdateEngagementDto } from './dto/update-engagement.dto';
+import { CreateFormDto } from './dto/create-form.dto';
+import { UpdateFormDto } from './dto/update-form.dto';
+import { CreateOpinionDto } from './dto/create-opinion.dto';
+import { UpdateOpinionDto } from './dto/update-opinion.dto';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Engagement')
@@ -9,28 +11,55 @@ import { ApiTags } from '@nestjs/swagger';
 export class EngagementController {
   constructor(private readonly engagementService: EngagementService) {}
 
-  @Post()
-  create(@Body() createEngagementDto: CreateEngagementDto) {
-    return this.engagementService.create(createEngagementDto);
+  // Form endpoints
+  @Post('forms')
+  createForm(@Body() createFormDto: CreateFormDto) {
+    return this.engagementService.createForm(createFormDto);
   }
 
-  @Get()
-  findAll() {
-    return this.engagementService.findAll();
+  @Get('forms')
+  findAllForms() {
+    return this.engagementService.findAllForms();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.engagementService.findOne(+id);
+  @Get('forms/:id')
+  findForm(@Param('id') id: string) {
+    return this.engagementService.findForm(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEngagementDto: UpdateEngagementDto) {
-    return this.engagementService.update(+id, updateEngagementDto);
+  @Patch('forms/:id')
+  updateForm(@Param('id') id: string, @Body() updateFormDto: UpdateFormDto) {
+    return this.engagementService.updateForm(+id, updateFormDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.engagementService.remove(+id);
+  @Delete('forms/:id')
+  removeForm(@Param('id') id: string) {
+    return this.engagementService.removeForm(+id);
+  }
+
+  // Opinion endpoints
+  @Post('opinions')
+  createOpinion(@Body() createOpinionDto: CreateOpinionDto) {
+    return this.engagementService.createOpinion(createOpinionDto);
+  }
+
+  @Get('opinions')
+  findAllOpinions() {
+    return this.engagementService.findAllOpinions();
+  }
+
+  @Get('opinions/:id')
+  findOpinion(@Param('id') id: string) {
+    return this.engagementService.findOpinion(+id);
+  }
+
+  @Patch('opinions/:id')
+  updateOpinion(@Param('id') id: string, @Body() updateOpinionDto: UpdateOpinionDto) {
+    return this.engagementService.updateOpinion(+id, updateOpinionDto);
+  }
+
+  @Delete('opinions/:id')
+  removeOpinion(@Param('id') id: string) {
+    return this.engagementService.removeOpinion(+id);
   }
 }
