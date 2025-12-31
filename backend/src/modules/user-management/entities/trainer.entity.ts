@@ -5,7 +5,7 @@ import { TrainingType } from '../../../common/enums';
 @Entity('trainers') // Tabela w bazie: trainers
 export class Trainer {
   @PrimaryGeneratedColumn()
-  id: number; // To jest ID trenera (np. 1, 2, 3...)
+  trainerId: number; // To jest ID trenera (np. 1, 2, 3...)
 
   @Column({ type: 'text', nullable: true })
   description: string;

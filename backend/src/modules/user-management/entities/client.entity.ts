@@ -4,7 +4,7 @@ import { User } from './user.entity';
 @Entity('clients') // Tabela w bazie: clients
 export class Client {
   @PrimaryGeneratedColumn()
-  id: number; // To jest ID klienta
+  clientId: number; // To jest ID klienta
 
   @Column({ name: 'training_goal', nullable: true })
   trainingGoal: string;
