@@ -6,9 +6,6 @@ export class Client {
   @PrimaryGeneratedColumn()
   clientId: number;
 
-  @Column({ name: 'training_goal', nullable: true })
-  trainingGoal: string;
-
   @OneToOne(() => User, (user) => user.client, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;

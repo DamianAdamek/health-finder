@@ -1,6 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  OneToOne, 
+  JoinColumn,
+  ManyToMany,
+  JoinTable 
+} from 'typeorm';
 import { User } from './user.entity';
 import { TrainingType } from '../../../common/enums';
+import { Gym } from 'src/modules/facilities/entities/gym.entity';
 
 @Entity('trainers')
 export class Trainer {
@@ -26,4 +35,8 @@ export class Trainer {
 
   @Column({ name: 'user_id' })
   userId: number;
+
+  @ManyToMany(() => Gym, (gym) => gym.trainers)
+  @JoinTable()
+  gyms: Gym[];
 }

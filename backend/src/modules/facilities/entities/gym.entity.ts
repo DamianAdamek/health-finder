@@ -1,6 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { 
+    Entity, 
+    PrimaryGeneratedColumn, 
+    Column, 
+    OneToOne, 
+    JoinColumn, 
+    OneToMany, 
+    CreateDateColumn,
+    UpdateDateColumn,
+    ManyToMany,
+    JoinTable 
+} from 'typeorm';
 import { Location } from './location.entity';
 import { Room } from './room.entity';
+import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
 
 @Entity('gyms')
 export class Gym {
@@ -31,4 +43,8 @@ export class Gym {
 
     @UpdateDateColumn()
     updatedAt: Date;
+
+    @ManyToMany(() => Trainer, (trainer) => trainer.gyms)
+    @JoinTable()
+    trainers: Trainer[];
 }
