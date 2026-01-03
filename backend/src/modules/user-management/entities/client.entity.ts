@@ -9,7 +9,4 @@ export class Client {
   @OneToOne(() => User, (user) => user.client, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
-
-  @Column({ name: 'user_id' })
-  userId: number;
 }

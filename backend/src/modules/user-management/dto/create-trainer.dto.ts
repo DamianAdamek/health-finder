@@ -3,9 +3,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TrainingType } from '../../../common/enums';
 
 export class CreateTrainerDto extends CreateUserDto {
-  @ApiProperty({ enum: TrainingType, example: TrainingType.BODYBUILDING })
-  specialization: TrainingType;
+  @ApiProperty({ enum: TrainingType, example: TrainingType.BODYBUILDING, required: false })
+  specialization?: TrainingType;
 
-  @ApiProperty({ example: 'Certified personal trainer with 5 years exp.' })
-  description: string;
+  @ApiProperty({ example: 'Certified personal trainer with 5 years exp.', required: false })
+  description?: string;
 }

@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TrainingType } from '../../../common/enums';
+import { UpdateUserDto } from './update-user.dto';
 
-export class UpdateTrainerDto {
+export class UpdateTrainerDto extends UpdateUserDto {
   @ApiProperty({ enum: TrainingType, required: false })
   specialization?: TrainingType;
 

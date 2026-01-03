@@ -2,9 +2,10 @@ import {
     Entity, 
     PrimaryGeneratedColumn, 
     Column, 
-    OneToMany,
     ManyToMany,
-    JoinTable 
+    JoinTable,
+    ManyToOne,
+    JoinColumn 
 } from 'typeorm';
 import { TrainingStatus, TrainingType } from '../../../common/enums';
 import { Room } from 'src/modules/facilities/entities/room.entity';
@@ -16,13 +17,15 @@ export class Training {
     @PrimaryGeneratedColumn()
     trainingId: number;
 
-    @OneToMany(() => Room)
+    @ManyToOne(() => Room)
+    @JoinColumn({ name: 'room_id' })
     room: Room;
 
     @Column()
-    price: number
+    price: number;
 
-    @OneToMany(() => Trainer)
+    @ManyToOne(() => Trainer)
+    @JoinColumn({ name: 'trainer_id' })
     trainer: Trainer;
 
     @Column({
@@ -34,14 +37,18 @@ export class Training {
     status: TrainingStatus;
 
     @Column({
-        name: 'day',
+        name: 'type',
         type: 'enum',
-        enum: TrainingType,
-        default: TrainingType.FUNCTIONAL
+        enum: TrainingType
     })
     type: TrainingType;
 
     @ManyToMany(() => Client)
-    @JoinTable()
+    @JoinTable({
+        name: 'training_clients',
+        joinColumn: { name: 'training_id' },
+        inverseJoinColumn: { name: 'client_id' }
+    }
+    )
     clients: Client[];
 }
