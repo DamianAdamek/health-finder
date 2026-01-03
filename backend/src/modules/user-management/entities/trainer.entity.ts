@@ -2,10 +2,10 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'ty
 import { User } from './user.entity';
 import { TrainingType } from '../../../common/enums';
 
-@Entity('trainers') // Tabela w bazie: trainers
+@Entity('trainers')
 export class Trainer {
   @PrimaryGeneratedColumn()
-  trainerId: number; // To jest ID trenera (np. 1, 2, 3...)
+  trainerId: number;
 
   @Column({ type: 'text', nullable: true })
   description: string;
@@ -18,14 +18,12 @@ export class Trainer {
   specialization: TrainingType;
 
   @Column({ type: 'float', default: 0 })
-  rating: number; // Średnia ocena
+  rating: number; 
 
-  // Relacja do tabeli users
   @OneToOne(() => User, (user) => user.trainer, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' }) // Kolumna klucza obcego w bazie: user_id
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
-  // Pole pomocnicze (żeby łatwo odczytać ID bez joinowania)
   @Column({ name: 'user_id' })
   userId: number;
 }

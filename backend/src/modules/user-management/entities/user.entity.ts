@@ -3,12 +3,12 @@ import { UserRole } from '../../../common/enums';
 import { Trainer } from './trainer.entity';
 import { Client } from './client.entity';
 
-@Entity('users') // Tabela w bazie: users
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'first_name' }) // W kodzie: firstName, w bazie: first_name
+  @Column({ name: 'first_name' })
   firstName: string;
 
   @Column({ name: 'last_name' })
@@ -28,12 +28,11 @@ export class User {
     enum: UserRole,
     default: UserRole.CLIENT,
   })
-  role: UserRole; // Odpowiednik "discriminator"
+  role: UserRole;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  // Relacje (nie tworzą kolumn w tej tabeli, służą do nawigacji)
   @OneToOne(() => Trainer, (trainer) => trainer.user)
   trainer: Trainer;
 
