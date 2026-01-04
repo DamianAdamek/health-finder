@@ -4,11 +4,6 @@ import { DayOfWeek } from '../../../common/enums';
 
 @ApiSchema({ description: 'DTO do tworzenia nowego okna dostępności' })
 export class CreateWindowDto {
-    @ApiProperty({ example: 1, description: 'ID okna' })
-    @IsNumber()
-    @IsPositive()
-    windowId: number;
-
     @ApiProperty({ example: 1, description: 'ID harmonogramu' })
     @IsNumber()
     @IsPositive()

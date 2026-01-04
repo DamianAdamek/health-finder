@@ -32,14 +32,14 @@ export class SchedulingService {
 
     async getAllSchedules(): Promise<Schedule[]> {
         return this.scheduleRepository.find({
-            relations: ['windows', 'trainings'],
+            relations: ['windows', 'windows.training'],
         });
     }
 
     async getScheduleById(id: number): Promise<Schedule> {
         const schedule = await this.scheduleRepository.findOne({
-            where: { ScheduleId: id },
-            relations: ['windows', 'trainings'],
+            where: { scheduleId: id },
+            relations: ['windows', 'windows.training'],
         });
         if (!schedule) {
             throw new NotFoundException(`Schedule with ID ${id} not found`);
@@ -49,20 +49,13 @@ export class SchedulingService {
 
     async updateSchedule(id: number, updateScheduleDto: UpdateScheduleDto): Promise<Schedule> {
         const schedule = await this.getScheduleById(id);
-        
-        if (updateScheduleDto.windowIds !== undefined) {
-            schedule.windows = await this.windowRepository.findByIds(updateScheduleDto.windowIds);
-        }
-        
-        if (updateScheduleDto.trainingIds !== undefined) {
-            schedule.trainings = await this.trainingRepository.findByIds(updateScheduleDto.trainingIds);
-        }
-        
+        // Schedule sam zawiera windows, treningi są zalinkowywane przez windows.training
         return this.scheduleRepository.save(schedule);
     }
 
     async deleteSchedule(id: number): Promise<void> {
-        await this.scheduleRepository.delete(id);
+        const schedule = await this.getScheduleById(id);
+        await this.scheduleRepository.remove(schedule);
     }
 
     // Window CRUD
@@ -73,14 +66,14 @@ export class SchedulingService {
 
     async getAllWindows(): Promise<Window[]> {
         return this.windowRepository.find({
-            relations: ['schedule'],
+            relations: ['schedule', 'training'],
         });
     }
 
     async getWindowById(id: number): Promise<Window> {
         const window = await this.windowRepository.findOne({
             where: { windowId: id },
-            relations: ['schedule'],
+            relations: ['schedule', 'training'],
         });
         if (!window) {
             throw new NotFoundException(`Window with ID ${id} not found`);
@@ -90,8 +83,8 @@ export class SchedulingService {
 
     async getWindowsByScheduleId(scheduleId: number): Promise<Window[]> {
         return this.windowRepository.find({
-            where: { schedule: { ScheduleId: scheduleId } },
-            relations: ['schedule'],
+            where: { schedule: { scheduleId } },
+            relations: ['schedule', 'training'],
         });
     }
 
@@ -101,7 +94,8 @@ export class SchedulingService {
     }
 
     async deleteWindow(id: number): Promise<void> {
-        await this.windowRepository.delete(id);
+        const window = await this.getWindowById(id);
+        await this.windowRepository.remove(window);
     }
 
     // Training CRUD
@@ -112,14 +106,14 @@ export class SchedulingService {
 
     async getAllTrainings(): Promise<Training[]> {
         return this.trainingRepository.find({
-            relations: ['room', 'trainer', 'clients'],
+            relations: ['room', 'trainer', 'clients', 'window'],
         });
     }
 
     async getTrainingById(id: number): Promise<Training> {
         const training = await this.trainingRepository.findOne({
             where: { trainingId: id },
-            relations: ['room', 'trainer', 'clients'],
+            relations: ['room', 'trainer', 'clients', 'window'],
         });
         if (!training) {
             throw new NotFoundException(`Training with ID ${id} not found`);
@@ -133,6 +127,7 @@ export class SchedulingService {
     }
 
     async deleteTraining(id: number): Promise<void> {
-        await this.trainingRepository.delete(id);
+        const training = await this.getTrainingById(id);
+        await this.trainingRepository.remove(training);
     }
 }

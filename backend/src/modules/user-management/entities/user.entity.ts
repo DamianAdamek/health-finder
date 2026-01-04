@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToOne, CreateDateColumn } fr
 import { UserRole } from '../../../common/enums';
 import { Trainer } from './trainer.entity';
 import { Client } from './client.entity';
+import { GymAdmin } from './gym-admin.entity';
 
 @Entity('users')
 export class User {
@@ -38,4 +39,7 @@ export class User {
 
   @OneToOne(() => Client, (client) => client.user)
   client: Client;
+
+  @OneToOne(() => GymAdmin, (gymAdmin) => gymAdmin.user)
+  gymAdmin: GymAdmin;
 }

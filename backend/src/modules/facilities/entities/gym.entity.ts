@@ -5,6 +5,7 @@ import {
     OneToOne, 
     JoinColumn, 
     OneToMany, 
+    ManyToOne,
     CreateDateColumn,
     UpdateDateColumn,
     ManyToMany,
@@ -13,6 +14,7 @@ import {
 import { Location } from './location.entity';
 import { Room } from './room.entity';
 import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
+import { GymAdmin } from 'src/modules/user-management/entities/gym-admin.entity';
 
 @Entity('gyms')
 export class Gym {
@@ -43,6 +45,9 @@ export class Gym {
 
     @UpdateDateColumn()
     updatedAt: Date;
+
+    @ManyToOne(() => GymAdmin, (gymAdmin) => gymAdmin.gyms)
+    admin: GymAdmin;
 
     @ManyToMany(() => Trainer, (trainer) => trainer.gyms)
     @JoinTable({

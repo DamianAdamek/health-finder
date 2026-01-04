@@ -7,12 +7,15 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { Trainer } from './entities/trainer.entity';
 import { Client } from './entities/client.entity';
+import { GymAdmin } from './entities/gym-admin.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateTrainerDto } from './dto/create-trainer.dto';
+import { CreateGymAdminDto } from './dto/create-gym-admin.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateTrainerDto } from './dto/update-trainer.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { UpdateGymAdminDto } from './dto/update-gym-admin.dto';
 import { UserRole } from '../../common/enums';
 import { JwtPayload } from './strategies/jwt.strategy';
 
@@ -22,6 +25,7 @@ export class UserManagementService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Trainer) private trainerRepository: Repository<Trainer>,
     @InjectRepository(Client) private clientRepository: Repository<Client>,
+    @InjectRepository(GymAdmin) private gymAdminRepository: Repository<GymAdmin>,
     private jwtService: JwtService,
   ) {}
 
@@ -67,18 +71,42 @@ export class UserManagementService {
     return this.trainerRepository.save(newTrainer);
   }
 
+  async registerGymAdmin(dto: CreateGymAdminDto) {
+    await this.checkEmail(dto.email);
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const newUser = this.userRepository.create({
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      password: hashedPassword,
+      contactNumber: dto.contactNumber,
+      role: UserRole.GYM_ADMIN,
+    });
+    const savedUser = await this.userRepository.save(newUser);
+    const newGymAdmin = this.gymAdminRepository.create({ user: savedUser });
+    return this.gymAdminRepository.save(newGymAdmin);
+  }
+
   async login(dto: LoginDto) {
-    const user = await this.userRepository.findOne({ where: { email: dto.email } });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!dto?.email || !dto?.password) {
+      throw new BadRequestException('Email and password are required');
+    }
+
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password') // <-- potrzebne, gdy password ma select: false w encji
+      .where('user.email = :email', { email: dto.email })
+      .getOne();
+
+    if (!user || !user.password) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
-    
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
-    
+
+    const payload: JwtPayload = { sub: user.id, email: user.email, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
       userId: user.id,
@@ -204,6 +232,48 @@ export class UserManagementService {
   async removeClientProfile(id: number) {
     const client = await this.findOneClient(id);
     return this.clientRepository.remove(client);
+  }
+
+  // =================================================================
+  // GYM ADMINS CRUD (Zarządzanie profilami administratorów siłowni)
+  // =================================================================
+
+  findAllGymAdmins() {
+    return this.gymAdminRepository.find({
+      relations: ['user', 'gyms'],
+    });
+  }
+
+  async findOneGymAdmin(id: number) {
+    const gymAdmin = await this.gymAdminRepository.findOne({
+      where: { gymAdminId: id },
+      relations: ['user', 'gyms'],
+    });
+    if (!gymAdmin) throw new NotFoundException(`Gym Admin with ID ${id} not found`);
+    return gymAdmin;
+  }
+
+  async updateGymAdmin(id: number, dto: UpdateGymAdminDto) {
+    const gymAdmin = await this.findOneGymAdmin(id);
+    
+    // Aktualizuj dane User jeśli są podane
+    const { firstName, lastName, email, password, contactNumber, ...adminData } = dto;
+    if (firstName || lastName || email || password || contactNumber) {
+      const userDto: UpdateUserDto = { firstName, lastName, email, password, contactNumber };
+      await this.updateUser(gymAdmin.user.id, userDto);
+    }
+    
+    // Aktualizuj dane GymAdmin
+    if (Object.keys(adminData).length > 0) {
+      await this.gymAdminRepository.update(id, adminData);
+    }
+    
+    return this.findOneGymAdmin(id);
+  }
+
+  async removeGymAdminProfile(id: number) {
+    const gymAdmin = await this.findOneGymAdmin(id);
+    return this.gymAdminRepository.remove(gymAdmin);
   }
 
   // Helper

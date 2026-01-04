@@ -1,16 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, OneToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Window } from './window.entity';
-import { Training } from './training.entity';
 
-@Entity('schedule')
+@Entity('schedules')
 export class Schedule {
     @PrimaryGeneratedColumn()
-    ScheduleId: number;
+    scheduleId: number;
 
-    @OneToMany(() => Window, (window) => window.schedule)
-    windows: Window[]
+    @OneToMany(() => Window, (window) => window.schedule, { cascade: true })
+    windows: Window[];
 
-    @ManyToMany(() => Training)
-    @JoinTable()
-    trainings: Training[];
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }
