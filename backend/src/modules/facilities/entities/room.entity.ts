@@ -15,7 +15,7 @@ export class Room {
     @Column()
     gymId: number;
 
-    @ManyToOne(() => Gym, (gym) => gym.rooms, { onDelete: 'CASCADE', eager: true })
+    @ManyToOne(() => Gym, (gym) => gym.rooms, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'gymId' })
     gym: Gym;
 

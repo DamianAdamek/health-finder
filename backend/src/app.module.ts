@@ -14,7 +14,7 @@ import { EngagementModule } from './modules/engagement/engagement.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '../.env',
+      envFilePath: '../../../.env',
     }),
     
     TypeOrmModule.forRootAsync({
