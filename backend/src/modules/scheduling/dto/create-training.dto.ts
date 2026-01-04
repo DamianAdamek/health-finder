@@ -4,10 +4,6 @@ import { TrainingStatus, TrainingType } from '../../../common/enums';
 
 @ApiSchema({ description: 'DTO do tworzenia nowego treningu' })
 export class CreateTrainingDto {
-    @ApiProperty({ example: 1, description: 'ID treningu' })
-    @IsNumber()
-    @IsPositive()
-    trainingId: number;
 
     @ApiProperty({ example: 1, description: 'ID sali' })
     @IsNumber()
