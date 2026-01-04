@@ -1,5 +1,5 @@
 import { ApiProperty, ApiSchema } from '@nestjs/swagger';
-import { IsString, Matches, IsEnum, IsNumber, IsPositive } from 'class-validator';
+import { IsString, Matches, IsEnum, IsNumber, IsPositive, IsOptional } from 'class-validator';
 import { DayOfWeek } from '../../../common/enums';
 
 @ApiSchema({ description: 'DTO do tworzenia nowego okna dostępności' })
@@ -31,4 +31,10 @@ export class CreateWindowDto {
     @ApiProperty({ enum: DayOfWeek, example: DayOfWeek.MONDAY, description: 'Dzień tygodnia' })
     @IsEnum(DayOfWeek)
     dayOfWeek: DayOfWeek;
+
+    @ApiProperty({ example: 1, description: 'ID treningu (opcjonalnie)', required: false })
+    @IsOptional()
+    @IsNumber()
+    @IsPositive()
+    trainingId?: number;
 }

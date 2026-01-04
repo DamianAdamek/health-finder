@@ -5,12 +5,14 @@ import {
     ManyToMany,
     JoinTable,
     ManyToOne,
-    JoinColumn 
+    JoinColumn,
+    OneToOne 
 } from 'typeorm';
 import { TrainingStatus, TrainingType } from '../../../common/enums';
 import { Room } from 'src/modules/facilities/entities/room.entity';
 import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
 import { Client } from 'src/modules/user-management/entities/client.entity';
+import { Window } from './window.entity';
 
 @Entity('training')
 export class Training {
@@ -51,4 +53,7 @@ export class Training {
     }
     )
     clients: Client[];
+
+    @OneToOne(() => Window, { nullable: true })
+    window?: Window;
 }

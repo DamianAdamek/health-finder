@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
 import { DayOfWeek } from '../../../common/enums';
 import { Schedule } from './schedule.entity';
+import { Training } from './training.entity';
 
 @Entity('window')
 export class Window {
@@ -22,4 +23,8 @@ export class Window {
         type: 'enum',
         enum: DayOfWeek})
     dayOfWeek: DayOfWeek;
+
+    @OneToOne(() => Training, { nullable: true })
+    @JoinColumn({ name: 'training_id' })
+    training?: Training;
 }

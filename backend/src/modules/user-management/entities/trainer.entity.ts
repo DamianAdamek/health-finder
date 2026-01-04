@@ -4,8 +4,7 @@ import {
   Column, 
   OneToOne, 
   JoinColumn,
-  ManyToMany,
-  JoinTable 
+  ManyToMany
 } from 'typeorm';
 import { User } from './user.entity';
 import { TrainingType } from '../../../common/enums';
