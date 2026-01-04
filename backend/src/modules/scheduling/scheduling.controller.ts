@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SchedulingService } from './scheduling.service';
 import {
@@ -20,6 +20,7 @@ export class SchedulingController {
 
     // Schedule endpoints
     @Post('schedule')
+    @HttpCode(201)
     @ApiOperation({ summary: 'Utwórz nowy harmonogram' })
     @ApiResponse({ status: 201, description: 'Harmonogram utworzony', type: Schedule })
     async createSchedule(@Body() createScheduleDto: CreateScheduleDto): Promise<Schedule> {
@@ -51,14 +52,16 @@ export class SchedulingController {
     }
 
     @Delete('schedule/:id')
+    @HttpCode(204)
     @ApiOperation({ summary: 'Usuń harmonogram' })
     @ApiResponse({ status: 204, description: 'Harmonogram usunięty' })
     async deleteSchedule(@Param('id') id: string): Promise<void> {
-        return this.schedulingService.deleteSchedule(+id);
+        await this.schedulingService.deleteSchedule(+id);
     }
 
     // Window endpoints
     @Post('window')
+    @HttpCode(201)
     @ApiOperation({ summary: 'Utwórz nowe okno dostępności' })
     @ApiResponse({ status: 201, description: 'Okno utworzone', type: Window })
     async createWindow(@Body() createWindowDto: CreateWindowDto): Promise<Window> {
@@ -97,14 +100,16 @@ export class SchedulingController {
     }
 
     @Delete('window/:id')
+    @HttpCode(204)
     @ApiOperation({ summary: 'Usuń okno' })
     @ApiResponse({ status: 204, description: 'Okno usunięte' })
     async deleteWindow(@Param('id') id: string): Promise<void> {
-        return this.schedulingService.deleteWindow(+id);
+        await this.schedulingService.deleteWindow(+id);
     }
 
     // Training endpoints
     @Post('training')
+    @HttpCode(201)
     @ApiOperation({ summary: 'Utwórz nowy trening' })
     @ApiResponse({ status: 201, description: 'Trening utworzony', type: Training })
     async createTraining(@Body() createTrainingDto: CreateTrainingDto): Promise<Training> {
@@ -136,9 +141,10 @@ export class SchedulingController {
     }
 
     @Delete('training/:id')
+    @HttpCode(204)
     @ApiOperation({ summary: 'Usuń trening' })
     @ApiResponse({ status: 204, description: 'Trening usunięty' })
     async deleteTraining(@Param('id') id: string): Promise<void> {
-        return this.schedulingService.deleteTraining(+id);
+        await this.schedulingService.deleteTraining(+id);
     }
 }

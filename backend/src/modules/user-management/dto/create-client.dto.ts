@@ -3,5 +3,5 @@ import { ApiSchema } from '@nestjs/swagger';
 
 @ApiSchema({ description: 'DTO do tworzenia klienta' })
 export class CreateClientDto extends CreateUserDto {
-  // Client nie ma dodatkowych pól, więc tylko rozszerza CreateUserDto
+  // Klient nie ma dodatkowych pól, tylko rozszerza CreateUserDto
 }

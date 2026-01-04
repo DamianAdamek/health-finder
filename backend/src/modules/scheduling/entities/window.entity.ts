@@ -8,7 +8,7 @@ export class Window {
     windowId: number;
 
     @ManyToOne(() => Schedule, (schedule) => schedule.windows)
-    scheduleId: Schedule;
+    schedule: Schedule;
 
     // using string, because we need only the time, not date
     @Column({ name: 'start_time' })

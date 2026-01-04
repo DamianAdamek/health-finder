@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Schedule } from './entities/schedule.entity';
@@ -37,15 +37,28 @@ export class SchedulingService {
     }
 
     async getScheduleById(id: number): Promise<Schedule> {
-        return this.scheduleRepository.findOne({
+        const schedule = await this.scheduleRepository.findOne({
             where: { ScheduleId: id },
             relations: ['windows', 'trainings'],
         });
+        if (!schedule) {
+            throw new NotFoundException(`Schedule with ID ${id} not found`);
+        }
+        return schedule;
     }
 
     async updateSchedule(id: number, updateScheduleDto: UpdateScheduleDto): Promise<Schedule> {
-        await this.scheduleRepository.update(id, updateScheduleDto);
-        return this.getScheduleById(id);
+        const schedule = await this.getScheduleById(id);
+        
+        if (updateScheduleDto.windowIds !== undefined) {
+            schedule.windows = await this.windowRepository.findByIds(updateScheduleDto.windowIds);
+        }
+        
+        if (updateScheduleDto.trainingIds !== undefined) {
+            schedule.trainings = await this.trainingRepository.findByIds(updateScheduleDto.trainingIds);
+        }
+        
+        return this.scheduleRepository.save(schedule);
     }
 
     async deleteSchedule(id: number): Promise<void> {
@@ -65,10 +78,14 @@ export class SchedulingService {
     }
 
     async getWindowById(id: number): Promise<Window> {
-        return this.windowRepository.findOne({
+        const window = await this.windowRepository.findOne({
             where: { windowId: id },
             relations: ['schedule'],
         });
+        if (!window) {
+            throw new NotFoundException(`Window with ID ${id} not found`);
+        }
+        return window;
     }
 
     async getWindowsByScheduleId(scheduleId: number): Promise<Window[]> {
@@ -100,10 +117,14 @@ export class SchedulingService {
     }
 
     async getTrainingById(id: number): Promise<Training> {
-        return this.trainingRepository.findOne({
+        const training = await this.trainingRepository.findOne({
             where: { trainingId: id },
             relations: ['room', 'trainer', 'clients'],
         });
+        if (!training) {
+            throw new NotFoundException(`Training with ID ${id} not found`);
+        }
+        return training;
     }
 
     async updateTraining(id: number, updateTrainingDto: UpdateTrainingDto): Promise<Training> {

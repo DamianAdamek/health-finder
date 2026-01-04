@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 import { User } from './entities/user.entity';
@@ -12,7 +13,8 @@ import { LoginDto } from './dto/login.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateTrainerDto } from './dto/update-trainer.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
-import { UserRole } from '../../../common/enums';
+import { UserRole } from '../../common/enums';
+import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
 export class UserManagementService {
@@ -20,6 +22,7 @@ export class UserManagementService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Trainer) private trainerRepository: Repository<Trainer>,
     @InjectRepository(Client) private clientRepository: Repository<Client>,
+    private jwtService: JwtService,
   ) {}
 
   // =================================================================
@@ -69,8 +72,15 @@ export class UserManagementService {
     if (!user) throw new UnauthorizedException('Invalid credentials');
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+    
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+    
     return {
-      access_token: `mock_token_${user.id}_${Date.now()}`,
+      access_token: this.jwtService.sign(payload),
       userId: user.id,
       email: user.email,
       role: user.role,
@@ -127,7 +137,7 @@ export class UserManagementService {
 
   async findOneTrainer(id: number) {
     const trainer = await this.trainerRepository.findOne({
-      where: { id },
+      where: { trainerId: id },
       relations: ['user'],
     });
     if (!trainer) throw new NotFoundException(`Trainer with ID ${id} not found`);
@@ -136,7 +146,19 @@ export class UserManagementService {
 
   async updateTrainer(id: number, dto: UpdateTrainerDto) {
     const trainer = await this.findOneTrainer(id);
-    await this.trainerRepository.update(id, dto);
+    
+    // Aktualizuj dane User jeśli są podane
+    const { firstName, lastName, email, password, contactNumber, ...trainerData } = dto;
+    if (firstName || lastName || email || password || contactNumber) {
+      const userDto: UpdateUserDto = { firstName, lastName, email, password, contactNumber };
+      await this.updateUser(trainer.user.id, userDto);
+    }
+    
+    // Aktualizuj dane Trainer (specialization, description, rating)
+    if (Object.keys(trainerData).length > 0) {
+      await this.trainerRepository.update(id, trainerData);
+    }
+    
     return this.findOneTrainer(id);
   }
 
@@ -159,7 +181,7 @@ export class UserManagementService {
 
   async findOneClient(id: number) {
     const client = await this.clientRepository.findOne({
-      where: { id },
+      where: { clientId: id },
       relations: ['user'],
     });
     if (!client) throw new NotFoundException(`Client with ID ${id} not found`);
@@ -168,7 +190,14 @@ export class UserManagementService {
 
   async updateClient(id: number, dto: UpdateClientDto) {
     const client = await this.findOneClient(id);
-    await this.clientRepository.update(id, dto);
+    
+    // Client nie ma własnych pól, więc aktualizujemy tylko User
+    const { firstName, lastName, email, password, contactNumber } = dto;
+    if (firstName || lastName || email || password || contactNumber) {
+      const userDto: UpdateUserDto = { firstName, lastName, email, password, contactNumber };
+      await this.updateUser(client.user.id, userDto);
+    }
+    
     return this.findOneClient(id);
   }
 

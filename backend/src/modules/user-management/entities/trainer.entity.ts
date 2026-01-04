@@ -34,10 +34,5 @@ export class Trainer {
   user: User;
 
   @ManyToMany(() => Gym, (gym) => gym.trainers)
-  @JoinTable({
-    name: 'trainer_gyms',
-    joinColumn: { name: 'trainer_id' },
-    inverseJoinColumn: { name: 'gym_id' }
-  })
   gyms: Gym[];
 }
