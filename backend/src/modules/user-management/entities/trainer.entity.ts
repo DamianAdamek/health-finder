@@ -9,6 +9,7 @@ import {
 import { User } from './user.entity';
 import { TrainingType } from '../../../common/enums';
 import { Gym } from 'src/modules/facilities/entities/gym.entity';
+import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
 
 @Entity('trainers')
 export class Trainer {
@@ -34,4 +35,8 @@ export class Trainer {
 
   @ManyToMany(() => Gym, (gym) => gym.trainers)
   gyms: Gym[];
+
+  @OneToOne(() => Schedule, { cascade: true, eager: true })
+  @JoinColumn({ name: 'schedule_id' })
+  schedule: Schedule;
 }

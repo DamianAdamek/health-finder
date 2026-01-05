@@ -1,7 +1,4 @@
-import { UpdateUserDto } from './update-user.dto';
-import { ApiSchema } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/swagger';
+import { CreateClientDto } from './create-client.dto';
 
-@ApiSchema({ description: 'DTO do aktualizacji klienta' })
-export class UpdateClientDto extends UpdateUserDto {
-  // Client nie ma dodatkowych pól poza User, więc tylko rozszerza UpdateUserDto
-}
+export class UpdateClientDto extends PartialType(CreateClientDto) {}

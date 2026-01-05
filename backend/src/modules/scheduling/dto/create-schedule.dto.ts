@@ -1,6 +1,4 @@
-import { ApiProperty, ApiSchema } from '@nestjs/swagger';
-import { IsNumber, IsPositive } from 'class-validator';
+import { ApiSchema } from '@nestjs/swagger';
 
-@ApiSchema({ description: 'DTO do tworzenia nowego harmonogramu' })
-export class CreateScheduleDto {
-}
+@ApiSchema({ description: 'DTO for creating schedule' })
+export class CreateScheduleDto {}

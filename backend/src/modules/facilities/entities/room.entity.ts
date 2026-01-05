@@ -9,8 +9,8 @@ export class Room {
     @Column({ length: 100 })
     name: string;
 
-    @Column()
-    capacity: number;
+    @Column({ nullable: true })
+    capacity?: number;
 
     @Column()
     gymId: number;
