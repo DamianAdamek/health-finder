@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, OneToOne, JoinColumn, JoinTable } from 'typeorm';
 import { DayOfWeek } from '../../../common/enums';
 import { Schedule } from './schedule.entity';
 import { Training } from './training.entity';
@@ -8,8 +8,13 @@ export class Window {
     @PrimaryGeneratedColumn()
     windowId: number;
 
-    @ManyToOne(() => Schedule, (schedule) => schedule.windows)
-    schedule: Schedule;
+    @ManyToMany(() => Schedule, (schedule) => schedule.windows)
+    @JoinTable({
+        name: 'window_schedules',
+        joinColumn: { name: 'window_id' },
+        inverseJoinColumn: { name: 'schedule_id' }
+    })
+    schedules: Schedule[];
 
     // using string, because we need only the time, not date
     @Column({ name: 'start_time' })

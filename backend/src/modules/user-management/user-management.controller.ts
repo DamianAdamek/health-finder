@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UserManagementService } from './user-management.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateClientDto } from './dto/create-client.dto';
 import { CreateTrainerDto } from './dto/create-trainer.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -27,7 +27,7 @@ export class UserManagementController {
   @HttpCode(201)
   @ApiOperation({ summary: 'Register a new Client' })
   @ApiResponse({ status: 201, description: 'Client registered', type: Client })
-  async registerClient(@Body() dto: CreateUserDto): Promise<Client> {
+  async registerClient(@Body() dto: CreateClientDto): Promise<Client> {
     return this.userService.registerClient(dto);
   }
 

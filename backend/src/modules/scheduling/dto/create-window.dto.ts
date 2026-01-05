@@ -1,18 +1,15 @@
 import { ApiProperty, ApiSchema } from '@nestjs/swagger';
-import { IsString, Matches, IsEnum, IsNumber, IsPositive, IsOptional } from 'class-validator';
+import { IsString, Matches, IsEnum, IsNumber, IsPositive, IsOptional, IsArray } from 'class-validator';
 import { DayOfWeek } from '../../../common/enums';
 
-@ApiSchema({ description: 'DTO do tworzenia nowego okna dostępności' })
+@ApiSchema({ description: 'DTO for creating availability window' })
 export class CreateWindowDto {
-    @ApiProperty({ example: 1, description: 'ID okna' })
-    @IsNumber()
-    @IsPositive()
-    windowId: number;
-
-    @ApiProperty({ example: 1, description: 'ID harmonogramu' })
-    @IsNumber()
-    @IsPositive()
-    scheduleId: number;
+    @ApiProperty({ example: [1, 2, 3], description: 'IDs of schedules (optional; if absent, assigned automatically from trainingId)', required: false })
+    @IsOptional()
+    @IsArray()
+    @IsNumber({}, { each: true })
+    @IsPositive({ each: true })
+    scheduleIds?: number[];
 
     @ApiProperty({ example: '08:00', description: 'Format HH:mm' })
     @IsString()
@@ -28,11 +25,11 @@ export class CreateWindowDto {
     })
     endTime: string;
 
-    @ApiProperty({ enum: DayOfWeek, example: DayOfWeek.MONDAY, description: 'Dzień tygodnia' })
+    @ApiProperty({ enum: DayOfWeek, example: DayOfWeek.MONDAY, description: 'Day of the week' })
     @IsEnum(DayOfWeek)
     dayOfWeek: DayOfWeek;
 
-    @ApiProperty({ example: 1, description: 'ID treningu (opcjonalnie)', required: false })
+    @ApiProperty({ example: 1, description: 'Training ID (optional, null to detach training)', required: false })
     @IsOptional()
     @IsNumber()
     @IsPositive()
