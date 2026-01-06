@@ -6,7 +6,9 @@ import {
     JoinTable,
     ManyToOne,
     JoinColumn,
-    OneToOne 
+    OneToOne, 
+    UpdateDateColumn,
+    CreateDateColumn
 } from 'typeorm';
 import { TrainingStatus, TrainingType } from '../../../common/enums';
 import { Room } from 'src/modules/facilities/entities/room.entity';
@@ -56,4 +58,10 @@ export class Training {
 
     @OneToOne(() => Window, { nullable: true })
     window?: Window;
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }
