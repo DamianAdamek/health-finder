@@ -26,9 +26,9 @@ export class SchedulingController {
     @Post('schedules')
     @HttpCode(201)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Create a new schedule - Trainer (personal schedule), GymAdmin (room availability) or Admin' })
+    @ApiOperation({ summary: 'Create a new schedule - Trainer, GymAdmin, Client (personal availability) or Admin' })
     @ApiResponse({ status: 201, description: 'Schedule created', type: Schedule })
     async createSchedule(@Body() createScheduleDto: CreateScheduleDto): Promise<Schedule> {
         return this.schedulingService.createSchedule(createScheduleDto);
@@ -48,7 +48,7 @@ export class SchedulingController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.TRAINER, UserRole.CLIENT, UserRole.GYM_ADMIN, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get schedule by ID - Authenticated users only' })
+    @ApiOperation({ summary: 'Get schedule by ID - Authenticated users (client/trainer/gym admin/admin)' })
     @ApiResponse({ status: 200, description: 'Schedule', type: Schedule })
     async getScheduleById(@Param('id') id: string): Promise<Schedule> {
         return this.schedulingService.getScheduleById(+id);
@@ -56,9 +56,9 @@ export class SchedulingController {
 
     @Patch('schedules/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Update schedule - Trainer (own schedule), GymAdmin (room availability) or Admin' })
+    @ApiOperation({ summary: 'Update schedule - Trainer, GymAdmin, Client (own schedule) or Admin' })
     @ApiResponse({ status: 200, description: 'Schedule updated', type: Schedule })
     async updateSchedule(
         @Param('id') id: string,
@@ -70,9 +70,9 @@ export class SchedulingController {
     @Delete('schedules/:id')
     @HttpCode(204)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Delete schedule - Trainer (own schedule), GymAdmin (room availability) or Admin' })
+    @ApiOperation({ summary: 'Delete schedule - Trainer, GymAdmin, Client (own schedule) or Admin' })
     @ApiResponse({ status: 204, description: 'Schedule deleted' })
     async deleteSchedule(@Param('id') id: string): Promise<void> {
         await this.schedulingService.deleteSchedule(+id);
@@ -82,9 +82,9 @@ export class SchedulingController {
     @Post('windows')
     @HttpCode(201)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Create availability window - Trainer, GymAdmin (room slots) or Admin' })
+    @ApiOperation({ summary: 'Create availability window - Trainer, GymAdmin (room slots), Client (own availability) or Admin' })
     @ApiResponse({ status: 201, description: 'Window created', type: Window })
     async createWindow(@Body() createWindowDto: CreateWindowDto): Promise<Window> {
         return this.schedulingService.createWindow(createWindowDto);
@@ -106,9 +106,9 @@ export class SchedulingController {
 
     @Get('windows/schedule/:scheduleId')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get windows by schedule ID - Trainer/GymAdmin/Admin only' })
+    @ApiOperation({ summary: 'Get windows by schedule ID - Trainer/GymAdmin/Client/Admin' })
     @ApiResponse({ status: 200, description: 'List of windows', type: [Window] })
     async getWindowsByScheduleId(@Param('scheduleId') scheduleId: string): Promise<Window[]> {
         return this.schedulingService.getWindowsByScheduleId(+scheduleId);
@@ -116,9 +116,9 @@ export class SchedulingController {
 
     @Patch('windows/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Update window - Trainer, GymAdmin (room slots) or Admin' })
+    @ApiOperation({ summary: 'Update window - Trainer, GymAdmin (room slots), Client (own availability) or Admin' })
     @ApiResponse({ status: 200, description: 'Window updated', type: Window })
     async updateWindow(
         @Param('id') id: string,
@@ -130,9 +130,9 @@ export class SchedulingController {
     @Delete('windows/:id')
     @HttpCode(204)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Delete window - Trainer, GymAdmin (room slots) or Admin' })
+    @ApiOperation({ summary: 'Delete window - Trainer, GymAdmin (room slots), Client (own availability) or Admin' })
     @ApiResponse({ status: 204, description: 'Window deleted' })
     async deleteWindow(@Param('id') id: string): Promise<void> {
         await this.schedulingService.deleteWindow(+id);
@@ -142,9 +142,9 @@ export class SchedulingController {
     @Post('trainings')
     @HttpCode(201)
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Create training booking - Trainer, GymAdmin or Admin only' })
+    @ApiOperation({ summary: 'Create training booking - Trainer, GymAdmin, Client or Admin' })
     @ApiResponse({ status: 201, description: 'Training created', type: Training })
     async createTraining(@Body() createTrainingDto: CreateTrainingDto): Promise<Training> {
         return this.schedulingService.createTraining(createTrainingDto);
@@ -166,9 +166,9 @@ export class SchedulingController {
 
     @Patch('trainings/:id')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.CLIENT, UserRole.ADMIN)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Update training - Trainer, GymAdmin or Admin only' })
+    @ApiOperation({ summary: 'Update training - Trainer, GymAdmin, Client or Admin' })
     @ApiResponse({ status: 200, description: 'Training updated', type: Training })
     async updateTraining(
         @Param('id') id: string,

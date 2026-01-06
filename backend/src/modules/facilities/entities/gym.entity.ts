@@ -46,8 +46,13 @@ export class Gym {
     @UpdateDateColumn()
     updatedAt: Date;
 
-    @ManyToOne(() => GymAdmin, (gymAdmin) => gymAdmin.gyms)
-    admin: GymAdmin;
+    @ManyToMany(() => GymAdmin, (gymAdmin) => gymAdmin.gyms)
+    @JoinTable({
+        name: 'gym_admins_gyms',
+        joinColumn: { name: 'gym_id' },
+        inverseJoinColumn: { name: 'gym_admin_id' }
+    })
+    admins: GymAdmin[];
 
     @ManyToMany(() => Trainer, (trainer) => trainer.gyms)
     @JoinTable({

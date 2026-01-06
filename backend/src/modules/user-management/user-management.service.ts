@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -8,6 +8,7 @@ import { User } from './entities/user.entity';
 import { Trainer } from './entities/trainer.entity';
 import { Client } from './entities/client.entity';
 import { GymAdmin } from './entities/gym-admin.entity';
+import { Gym } from '../facilities/entities/gym.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateTrainerDto } from './dto/create-trainer.dto';
 import { CreateGymAdminDto } from './dto/create-gym-admin.dto';
@@ -26,6 +27,7 @@ export class UserManagementService {
     @InjectRepository(Trainer) private trainerRepository: Repository<Trainer>,
     @InjectRepository(Client) private clientRepository: Repository<Client>,
     @InjectRepository(GymAdmin) private gymAdminRepository: Repository<GymAdmin>,
+    @InjectRepository(Gym) private gymRepository: Repository<Gym>,
     private jwtService: JwtService,
   ) {}
 
@@ -72,20 +74,28 @@ export class UserManagementService {
   }
 
   async registerGymAdmin(dto: CreateGymAdminDto) {
-    await this.checkEmail(dto.email);
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const { gymIds, ...rest } = dto;
+    await this.checkEmail(rest.email);
+    const hashedPassword = await bcrypt.hash(rest.password, 10);
 
     const newUser = this.userRepository.create({
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      email: dto.email,
+      firstName: rest.firstName,
+      lastName: rest.lastName,
+      email: rest.email,
       password: hashedPassword,
-      contactNumber: dto.contactNumber,
+      contactNumber: rest.contactNumber,
       role: UserRole.GYM_ADMIN,
     });
     const savedUser = await this.userRepository.save(newUser);
     const newGymAdmin = this.gymAdminRepository.create({ user: savedUser });
-    return this.gymAdminRepository.save(newGymAdmin);
+
+    if (gymIds && gymIds.length > 0) {
+      const gyms = await this.gymRepository.find({ where: { gymId: In(gymIds) } });
+      newGymAdmin.gyms = gyms;
+    }
+
+    await this.gymAdminRepository.save(newGymAdmin);
+    return this.findOneGymAdmin(newGymAdmin.gymAdminId);
   }
 
   async login(dto: LoginDto) {
@@ -256,14 +266,26 @@ export class UserManagementService {
   async updateGymAdmin(id: number, dto: UpdateGymAdminDto) {
     const gymAdmin = await this.findOneGymAdmin(id);
     
+    const { firstName, lastName, email, password, contactNumber, gymIds, ...adminData } = dto;
+
     // Aktualizuj dane User jeśli są podane
-    const { firstName, lastName, email, password, contactNumber, ...adminData } = dto;
     if (firstName || lastName || email || password || contactNumber) {
       const userDto: UpdateUserDto = { firstName, lastName, email, password, contactNumber };
       await this.updateUser(gymAdmin.user.id, userDto);
     }
     
-    // Aktualizuj dane GymAdmin
+    // Aktualizuj powiązane siłownie (ManyToMany)
+    if (gymIds !== undefined) {
+      if (gymIds.length > 0) {
+        const gyms = await this.gymRepository.find({ where: { gymId: In(gymIds) } });
+        gymAdmin.gyms = gyms;
+      } else {
+        gymAdmin.gyms = [];
+      }
+      await this.gymAdminRepository.save(gymAdmin);
+    }
+
+    // Aktualizuj dane GymAdmin (brak własnych pól na teraz)
     if (Object.keys(adminData).length > 0) {
       await this.gymAdminRepository.update(id, adminData);
     }

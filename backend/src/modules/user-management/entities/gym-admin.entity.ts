@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToMany } from 'typeorm';
 import { User } from './user.entity';
 import { Gym } from 'src/modules/facilities/entities/gym.entity';
 
@@ -11,7 +11,7 @@ export class GymAdmin {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @OneToMany(() => Gym, (gym) => gym.admin)
+  @ManyToMany(() => Gym, (gym) => gym.admins)
   gyms: Gym[];
 
   @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

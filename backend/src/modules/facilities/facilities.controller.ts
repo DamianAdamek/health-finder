@@ -14,6 +14,8 @@ import { JwtAuthGuard } from '../user-management/guards/jwt-auth.guard';
 import { RolesGuard } from '../user-management/guards/roles.guard';
 import { Roles } from '../user-management/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
+import { GymOwnershipGuard } from './guards/gym-ownership.guard';
+import { RoomOwnershipGuard } from './guards/room-ownership.guard';
 
 @ApiTags('Facilities')
 @Controller('facilities')
@@ -47,7 +49,7 @@ export class FacilitiesController {
   }
 
   @Patch('gyms/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, GymOwnershipGuard)
   @Roles(UserRole.GYM_ADMIN, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a gym - GymAdmin (own gym) or Admin' })
@@ -58,7 +60,7 @@ export class FacilitiesController {
 
   @Delete('gyms/:id')
   @HttpCode(204)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, GymOwnershipGuard)
   @Roles(UserRole.GYM_ADMIN, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove a gym - GymAdmin (own gym) or Admin' })
@@ -107,7 +109,7 @@ export class FacilitiesController {
 
   // Room endpoints
   @Post('rooms')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, RoomOwnershipGuard)
   @Roles(UserRole.GYM_ADMIN, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a room - GymAdmin or Admin only' })
@@ -132,7 +134,7 @@ export class FacilitiesController {
   }
 
   @Patch('rooms/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, RoomOwnershipGuard)
   @Roles(UserRole.GYM_ADMIN, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a room - GymAdmin (own gym) or Admin' })
@@ -143,7 +145,7 @@ export class FacilitiesController {
 
   @Delete('rooms/:id')
   @HttpCode(204)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, RoomOwnershipGuard)
   @Roles(UserRole.GYM_ADMIN, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove a room - GymAdmin (own gym) or Admin' })
