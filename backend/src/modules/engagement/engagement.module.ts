@@ -4,10 +4,13 @@ import { Form } from './entities/form.entity';
 import { Opinion } from './entities/opinion.entity';
 import { EngagementService } from './engagement.service';
 import { EngagementController } from './engagement.controller';
+import { UserManagementModule } from '../user-management/user-management.module';
+import { SchedulingModule } from '../scheduling/scheduling.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Form, Opinion])],
+  imports: [TypeOrmModule.forFeature([Form, Opinion]), UserManagementModule, SchedulingModule],
   controllers: [EngagementController],
   providers: [EngagementService],
+  exports: [EngagementService],
 })
 export class EngagementModule {}

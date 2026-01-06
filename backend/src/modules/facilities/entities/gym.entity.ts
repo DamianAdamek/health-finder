@@ -15,6 +15,7 @@ import { Location } from './location.entity';
 import { Room } from './room.entity';
 import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
 import { GymAdmin } from 'src/modules/user-management/entities/gym-admin.entity';
+import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
 
 @Entity('gyms')
 export class Gym {
@@ -61,4 +62,8 @@ export class Gym {
         inverseJoinColumn: { name: 'trainer_id' }
       })
     trainers: Trainer[];
+
+    @OneToOne(() => Schedule, { cascade: true, eager: true })
+    @JoinColumn({ name: 'schedule_id' })
+    schedule: Schedule;
 }

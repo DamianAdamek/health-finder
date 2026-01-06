@@ -7,6 +7,8 @@ import { CreateFormDto } from './dto/create-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
 import { CreateOpinionDto } from './dto/create-opinion.dto';
 import { UpdateOpinionDto } from './dto/update-opinion.dto';
+import { UserManagementService } from 'src/modules/user-management/user-management.service';
+import { SchedulingService } from 'src/modules/scheduling/scheduling.service';
 
 @Injectable()
 export class EngagementService {
@@ -16,10 +18,15 @@ export class EngagementService {
 
     @InjectRepository(Opinion)
     private opinionRepository: Repository<Opinion>,
+    private userService: UserManagementService,
+    private schedulingService: SchedulingService,
   ) {}
 
   // Form methods
   async createForm(createFormDto: CreateFormDto): Promise<Form> {
+    const clientExists = await this.userService.clientExists(createFormDto.clientId);
+    if (!clientExists) throw new NotFoundException(`Client with ID ${createFormDto.clientId} does not exist`);
+
     const form = this.formRepository.create(createFormDto);
     return this.formRepository.save(form);
   }
@@ -52,7 +59,19 @@ export class EngagementService {
 
   // Opinion methods
   async createOpinion(createOpinionDto: CreateOpinionDto): Promise<Opinion> {
-    // TODO: check if client has had completed sessions with the trainer before allowing opinion creation
+    const { clientId, trainerId } = createOpinionDto;
+
+    const clientExists = await this.userService.clientExists(clientId);
+    if (!clientExists) throw new NotFoundException(`Client with ID ${clientId} does not exist`);
+
+    const trainerExists = await this.userService.trainerExists(trainerId);
+    if (!trainerExists) throw new NotFoundException(`Trainer with ID ${trainerId} does not exist`);
+
+    const hasCompleted = await this.schedulingService.clientHasCompletedWithTrainer(clientId, trainerId);
+    if (!hasCompleted) {
+      throw new BadRequestException('Client must have at least one completed training with this trainer to leave an opinion');
+    }
+
     const opinion = this.opinionRepository.create(createOpinionDto);
     return this.opinionRepository.save(opinion);
   }

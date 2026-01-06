@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Gym } from './entities/gym.entity';
 import { Location } from './entities/location.entity';
 import { Room } from './entities/room.entity';
+import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
 import { CreateLocationDto } from './dto/create-location.dto';
@@ -22,12 +23,19 @@ export class FacilitiesService {
 
     @InjectRepository(Room)
     private roomRepository: Repository<Room>,
+    
+    @InjectRepository(Schedule)
+    private scheduleRepository: Repository<any>,
+
     private dataSource: DataSource,
   ) {}
 
   // Gym methods
   async createGym(createGymDto: CreateGymDto): Promise<Gym> {
-    const gym = this.gymRepository.create(createGymDto);
+    const schedule = this.scheduleRepository.create();
+    await this.scheduleRepository.save(schedule);
+
+    const gym = this.gymRepository.create({ ...createGymDto, schedule });
     return this.gymRepository.save(gym);
   }
 
@@ -105,6 +113,9 @@ export class FacilitiesService {
 
   // Room methods
   async createRoom(createRoomDto: CreateRoomDto): Promise<Room> {
+    const gymExists = await this.gymRepository.exists({ where: { gymId: createRoomDto.gymId } });
+    if (!gymExists) throw new NotFoundException(`Gym with ID ${createRoomDto.gymId} does not exist`);
+
     const room = this.roomRepository.create(createRoomDto);
     return this.roomRepository.save(room);
   }

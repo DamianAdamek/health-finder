@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Window } from './window.entity';
 
 @Entity('schedules')
@@ -6,8 +6,8 @@ export class Schedule {
     @PrimaryGeneratedColumn()
     scheduleId: number;
 
-    @OneToMany(() => Window, (window) => window.schedule, { cascade: true })
-    windows: Window[];
+    @ManyToMany(() => Window, (window) => window.schedules)
+    windows: Window[]
 
     @CreateDateColumn()
     createdAt: Date;
