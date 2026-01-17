@@ -1,8 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Window } from './window.entity';
-import { Training } from './training.entity';
 
-@Entity('schedule')
+@Entity('schedules')
 export class Schedule {
     @PrimaryGeneratedColumn()
     scheduleId: number;
@@ -10,7 +9,9 @@ export class Schedule {
     @ManyToMany(() => Window, (window) => window.schedules)
     windows: Window[]
 
-    @ManyToMany(() => Training)
-    @JoinTable()
-    trainings: Training[];
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

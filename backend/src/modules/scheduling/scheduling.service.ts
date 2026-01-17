@@ -198,7 +198,7 @@ export class SchedulingService {
 
     async getAllSchedules(): Promise<Schedule[]> {
         return this.scheduleRepository.find({
-            relations: ['windows', 'trainings'],
+            relations: ['windows', 'windows.training'],
         });
     }
 
@@ -499,14 +499,14 @@ export class SchedulingService {
 
     async getAllTrainings(): Promise<Training[]> {
         return this.trainingRepository.find({
-            relations: ['room', 'trainer', 'clients'],
+            relations: ['room', 'trainer', 'clients', 'window'],
         });
     }
 
     async getTrainingById(id: number): Promise<Training> {
         const training = await this.trainingRepository.findOne({
             where: { trainingId: id },
-            relations: ['room', 'trainer', 'clients'],
+            relations: ['room', 'trainer', 'clients', 'window'],
         });
         if (!training) {
             throw new NotFoundException(`Training with ID ${id} not found`);

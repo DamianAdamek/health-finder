@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, OneToOne, JoinColumn, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, OneToOne, JoinColumn, JoinTable, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { DayOfWeek } from '../../../common/enums';
 import { Schedule } from './schedule.entity';
 import { Training } from './training.entity';
@@ -32,4 +32,10 @@ export class Window {
     @OneToOne(() => Training, { nullable: true })
     @JoinColumn({ name: 'training_id' })
     training?: Training;
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

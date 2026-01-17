@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { UserRole } from '../../../common/enums';
 import { Trainer } from './trainer.entity';
 import { Client } from './client.entity';
+import { GymAdmin } from './gym-admin.entity';
 
 @Entity('users')
 export class User {
@@ -30,12 +31,18 @@ export class User {
   })
   role: UserRole;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt: Date;
+  
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @OneToOne(() => Trainer, (trainer) => trainer.user)
   trainer: Trainer;
 
   @OneToOne(() => Client, (client) => client.user)
   client: Client;
+
+  @OneToOne(() => GymAdmin, (gymAdmin) => gymAdmin.user)
+  gymAdmin: GymAdmin;
 }

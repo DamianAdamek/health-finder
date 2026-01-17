@@ -1,21 +1,25 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 import { User } from './entities/user.entity';
 import { Trainer } from './entities/trainer.entity';
 import { Client } from './entities/client.entity';
-import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
-import { Location } from 'src/modules/facilities/entities/location.entity';
+import { GymAdmin } from './entities/gym-admin.entity';
+import { Gym } from '../facilities/entities/gym.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateTrainerDto } from './dto/create-trainer.dto';
+import { CreateGymAdminDto } from './dto/create-gym-admin.dto';
+import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
+import { Location } from 'src/modules/facilities/entities/location.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateTrainerDto } from './dto/update-trainer.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { UpdateGymAdminDto } from './dto/update-gym-admin.dto';
 import { UserRole } from '../../common/enums';
 import { JwtPayload } from './strategies/jwt.strategy';
 
@@ -25,7 +29,11 @@ export class UserManagementService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Trainer) private trainerRepository: Repository<Trainer>,
     @InjectRepository(Client) private clientRepository: Repository<Client>,
-    @InjectRepository(Schedule) private scheduleRepository: Repository<any>,    @InjectRepository(Location) private locationRepository: Repository<Location>,    private jwtService: JwtService,
+    @InjectRepository(GymAdmin) private gymAdminRepository: Repository<GymAdmin>,
+    @InjectRepository(Gym) private gymRepository: Repository<Gym>,
+    @InjectRepository(Schedule) private scheduleRepository: Repository<Schedule>,    
+    @InjectRepository(Location) private locationRepository: Repository<Location>,    
+    private jwtService: JwtService,
   ) {}
 
   // =================================================================
@@ -87,18 +95,50 @@ export class UserManagementService {
     return this.trainerRepository.save(newTrainer);
   }
 
+  async registerGymAdmin(dto: CreateGymAdminDto) {
+    const { gymIds, ...rest } = dto;
+    await this.checkEmail(rest.email);
+    const hashedPassword = await bcrypt.hash(rest.password, 10);
+
+    const newUser = this.userRepository.create({
+      firstName: rest.firstName,
+      lastName: rest.lastName,
+      email: rest.email,
+      password: hashedPassword,
+      contactNumber: rest.contactNumber,
+      role: UserRole.GYM_ADMIN,
+    });
+    const savedUser = await this.userRepository.save(newUser);
+    const newGymAdmin = this.gymAdminRepository.create({ user: savedUser });
+
+    if (gymIds && gymIds.length > 0) {
+      const gyms = await this.gymRepository.find({ where: { gymId: In(gymIds) } });
+      newGymAdmin.gyms = gyms;
+    }
+
+    await this.gymAdminRepository.save(newGymAdmin);
+    return this.findOneGymAdmin(newGymAdmin.gymAdminId);
+  }
+
   async login(dto: LoginDto) {
-    const user = await this.userRepository.findOne({ where: { email: dto.email } });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!dto?.email || !dto?.password) {
+      throw new BadRequestException('Email and password are required');
+    }
+
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password') // <-- potrzebne, gdy password ma select: false w encji
+      .where('user.email = :email', { email: dto.email })
+      .getOne();
+
+    if (!user || !user.password) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
-    
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
-    
+
+    const payload: JwtPayload = { sub: user.id, email: user.email, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
       userId: user.id,
@@ -249,6 +289,60 @@ export class UserManagementService {
   async removeClientProfile(id: number) {
     const client = await this.findOneClient(id);
     return this.clientRepository.remove(client);
+  }
+
+  // =================================================================
+  // GYM ADMINS CRUD (Zarządzanie profilami administratorów siłowni)
+  // =================================================================
+
+  findAllGymAdmins() {
+    return this.gymAdminRepository.find({
+      relations: ['user', 'gyms'],
+    });
+  }
+
+  async findOneGymAdmin(id: number) {
+    const gymAdmin = await this.gymAdminRepository.findOne({
+      where: { gymAdminId: id },
+      relations: ['user', 'gyms'],
+    });
+    if (!gymAdmin) throw new NotFoundException(`Gym Admin with ID ${id} not found`);
+    return gymAdmin;
+  }
+
+  async updateGymAdmin(id: number, dto: UpdateGymAdminDto) {
+    const gymAdmin = await this.findOneGymAdmin(id);
+    
+    const { firstName, lastName, email, password, contactNumber, gymIds, ...adminData } = dto;
+
+    // Aktualizuj dane User jeśli są podane
+    if (firstName || lastName || email || password || contactNumber) {
+      const userDto: UpdateUserDto = { firstName, lastName, email, password, contactNumber };
+      await this.updateUser(gymAdmin.user.id, userDto);
+    }
+    
+    // Aktualizuj powiązane siłownie (ManyToMany)
+    if (gymIds !== undefined) {
+      if (gymIds.length > 0) {
+        const gyms = await this.gymRepository.find({ where: { gymId: In(gymIds) } });
+        gymAdmin.gyms = gyms;
+      } else {
+        gymAdmin.gyms = [];
+      }
+      await this.gymAdminRepository.save(gymAdmin);
+    }
+
+    // Aktualizuj dane GymAdmin (brak własnych pól na teraz)
+    if (Object.keys(adminData).length > 0) {
+      await this.gymAdminRepository.update(id, adminData);
+    }
+    
+    return this.findOneGymAdmin(id);
+  }
+
+  async removeGymAdminProfile(id: number) {
+    const gymAdmin = await this.findOneGymAdmin(id);
+    return this.gymAdminRepository.remove(gymAdmin);
   }
 
   // Helpers

@@ -14,6 +14,7 @@ async function bootstrap() {
     .setTitle('Health Finder API')
     .setDescription('System zarządzania siłownią i rezerwacjami')
     .setVersion('1.0')
+    .addBearerAuth() // <--- Włącza przycisk "Authorize" w Swaggerze
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

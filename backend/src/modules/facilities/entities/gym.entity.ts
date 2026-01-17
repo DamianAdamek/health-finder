@@ -5,6 +5,7 @@ import {
     OneToOne, 
     JoinColumn, 
     OneToMany, 
+    ManyToOne,
     CreateDateColumn,
     UpdateDateColumn,
     ManyToMany,
@@ -13,6 +14,7 @@ import {
 import { Location } from './location.entity';
 import { Room } from './room.entity';
 import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
+import { GymAdmin } from 'src/modules/user-management/entities/gym-admin.entity';
 import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
 
 @Entity('gyms')
@@ -44,6 +46,14 @@ export class Gym {
 
     @UpdateDateColumn()
     updatedAt: Date;
+
+    @ManyToMany(() => GymAdmin, (gymAdmin) => gymAdmin.gyms)
+    @JoinTable({
+        name: 'gym_admins_gyms',
+        joinColumn: { name: 'gym_id' },
+        inverseJoinColumn: { name: 'gym_admin_id' }
+    })
+    admins: GymAdmin[];
 
     @ManyToMany(() => Trainer, (trainer) => trainer.gyms)
     @JoinTable({
