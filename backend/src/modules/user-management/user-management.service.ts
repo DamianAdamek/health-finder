@@ -20,6 +20,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateTrainerDto } from './dto/update-trainer.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { UpdateGymAdminDto } from './dto/update-gym-admin.dto';
+import { RecommendationService } from '../scheduling/recommendation.service';
 import { UserRole } from '../../common/enums';
 import { JwtPayload } from './strategies/jwt.strategy';
 
@@ -34,6 +35,7 @@ export class UserManagementService {
     @InjectRepository(Schedule) private scheduleRepository: Repository<Schedule>,    
     @InjectRepository(Location) private locationRepository: Repository<Location>,    
     private jwtService: JwtService,
+    private recommendationService: RecommendationService,
   ) {}
 
   // =================================================================
@@ -281,6 +283,11 @@ export class UserManagementService {
         client.location = await this.locationRepository.save(newLocation);
         await this.clientRepository.save(client);
       }
+
+      // Recompute recommendations when location changes
+      await this.recommendationService.recomputeRecommendationsForClient(id).catch(error => {
+        console.error(`Failed to recompute recommendations for client ${id}:`, error);
+      });
     }
     
     return this.findOneClient(id);
