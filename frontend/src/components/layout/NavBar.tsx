@@ -2,6 +2,7 @@ import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { ModeToggle } from '../ui/mode-toggle';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -46,9 +47,11 @@ function Navbar() {
               {mobileMenuOpen ? <X /> : <Menu />}
             </Button>
 
-            <Button className="hidden md:inline-flex" variant="outline">
-              Sign In
-            </Button>
+            <Link to="/login">
+              <Button className="hidden md:inline-flex" variant="outline">
+                Sign In
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -78,13 +81,11 @@ function Navbar() {
             >
               <a href="#for-professionals">For professionals</a>
             </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Sign In
-            </Button>
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start">
+                Sign In
+              </Button>
+            </Link>
           </div>
         </div>
       )}

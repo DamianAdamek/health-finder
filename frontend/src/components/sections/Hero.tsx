@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
 
 function Hero() {
@@ -12,10 +13,20 @@ function Hero() {
           HealthFinder.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
-          <Button variant="default" size="lg" className="px-8 h-12 text-base">
-            Get Started
-          </Button>
-          <Button variant="outline" size="lg" className="px-8 h-12 text-base">
+          <Link to="/register">
+            <Button
+              variant="default"
+              size="lg"
+              className="w-full sm:w-auto px-8 h-12 text-base"
+            >
+              Get Started
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto px-8 h-12 text-base"
+          >
             <a href="#features">Learn More</a>
           </Button>
         </div>

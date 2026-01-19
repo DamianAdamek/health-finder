@@ -1,5 +1,6 @@
 import { Calendar, ShieldCheck, TrendingUp } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Link } from 'react-router-dom';
 
 const features = [
   {
@@ -48,12 +49,16 @@ function ForProfessionals() {
               <span className="text-muted-foreground">Image/Illustration</span>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="default" size="lg">
-                Join as a Professional
-              </Button>
-              <Button variant="outline" size="lg">
-                Login to Your Account
-              </Button>
+              <Link to="/register">
+                <Button variant="default" size="lg">
+                  Join as a Professional
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button variant="outline" size="lg">
+                  Login to Your Account
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
