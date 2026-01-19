@@ -32,6 +32,9 @@ export class EngagementService {
     const form = this.formRepository.create(createFormDto);
     const savedForm = await this.formRepository.save(form);
 
+    // Update client's form reference
+    await this.userService.updateClient(savedForm.clientId, { formId: savedForm.formId });
+
     // Compute recommendations when form is first created
     await this.recommendationService.recomputeRecommendationsForClient(savedForm.clientId).catch(error => {
       console.error(`Failed to compute recommendations for client ${savedForm.clientId}:`, error);

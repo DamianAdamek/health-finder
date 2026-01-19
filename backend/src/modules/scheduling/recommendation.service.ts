@@ -59,10 +59,10 @@ export class RecommendationService {
       return cachedResult;
     }
 
-    // 1. Get client with location
+    // 1. Get client with location and form
     const client = await this.clientRepository.findOne({
       where: { clientId },
-      relations: ['location'],
+      relations: ['location', 'form'],
     });
 
     if (!client) {
@@ -73,10 +73,8 @@ export class RecommendationService {
       throw new NotFoundException(`Client with ID ${clientId} has no location set`);
     }
 
-    // 2. Get client's form to know training preferences
-    const form = await this.formRepository.findOne({
-      where: { clientId },
-    });
+    // 2. Get client's form from relation
+    const form = client.form;
 
     // 3. Get client's coordinates from address
     const clientCoords = await this.locationService.getCoordinates(client.location);

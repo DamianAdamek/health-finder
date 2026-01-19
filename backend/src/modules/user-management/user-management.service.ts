@@ -23,6 +23,7 @@ import { UpdateGymAdminDto } from './dto/update-gym-admin.dto';
 import { RecommendationService } from '../scheduling/recommendation.service';
 import { UserRole } from '../../common/enums';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { Form } from '../engagement/entities/form.entity';
 
 @Injectable()
 export class UserManagementService {
@@ -33,7 +34,8 @@ export class UserManagementService {
     @InjectRepository(GymAdmin) private gymAdminRepository: Repository<GymAdmin>,
     @InjectRepository(Gym) private gymRepository: Repository<Gym>,
     @InjectRepository(Schedule) private scheduleRepository: Repository<Schedule>,    
-    @InjectRepository(Location) private locationRepository: Repository<Location>,    
+    @InjectRepository(Location) private locationRepository: Repository<Location>,
+    @InjectRepository(Form) private formRepository: Repository<Form>,
     private jwtService: JwtService,
     private recommendationService: RecommendationService,
   ) {}
@@ -254,8 +256,10 @@ export class UserManagementService {
   async updateClient(id: number, dto: UpdateClientDto) {
     const client = await this.findOneClient(id);
     
+    let shouldRecomputeRecommendations = false;
+    
     // Update User fields if provided
-    const { firstName, lastName, email, password, contactNumber, city, zipCode, street, buildingNumber, apartmentNumber } = dto;
+    const { firstName, lastName, email, password, contactNumber, city, zipCode, street, buildingNumber, apartmentNumber, formId } = dto;
     if (firstName || lastName || email || password || contactNumber) {
       const userDto: UpdateUserDto = { firstName, lastName, email, password, contactNumber };
       await this.updateUser(client.user.id, userDto);
@@ -283,8 +287,26 @@ export class UserManagementService {
         client.location = await this.locationRepository.save(newLocation);
         await this.clientRepository.save(client);
       }
+      shouldRecomputeRecommendations = true;
+    }
 
-      // Recompute recommendations when location changes
+    // Update form reference if provided
+    if (formId !== undefined) {
+      if (formId === null) {
+        client.form = undefined;
+      } else {
+        const form = await this.formRepository.findOne({ where: { formId } });
+        if (!form) {
+          throw new NotFoundException(`Form with ID ${formId} not found`);
+        }
+        client.form = form;
+      }
+      await this.clientRepository.save(client);
+      shouldRecomputeRecommendations = true;
+    }
+
+    // Recompute recommendations when location or form changes
+    if (shouldRecomputeRecommendations) {
       await this.recommendationService.recomputeRecommendationsForClient(id).catch(error => {
         console.error(`Failed to recompute recommendations for client ${id}:`, error);
       });
