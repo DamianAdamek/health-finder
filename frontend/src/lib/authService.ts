@@ -41,6 +41,42 @@ export interface UserInfo {
   userId: number;
   email: string;
   role: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface UserProfile {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  role: string;
+  contactNumber?: string;
+  trainer?: {
+    trainerId?: number;
+    specialization?: string;
+    description?: string;
+    schedule?: {
+      scheduleId?: number;
+    };
+  };
+  client?: {
+    clientId?: number;
+    location?: {
+      locationId?: number;
+      city?: string;
+      zipCode?: string;
+      street?: string;
+      buildingNumber?: string;
+      apartmentNumber?: string;
+      createdAt?: string;
+      updatedAt?: string;
+    };
+    schedule?: {
+      scheduleId?: number;
+    };
+  };
+  createdAt?: string;
 }
 
 // ===================== Token Management =====================
@@ -156,9 +192,30 @@ export async function registerTrainer(payload: RegisterTrainerPayload): Promise<
  * Get current user profile (protected endpoint)
  * GET /user-management/users/me
  */
-export async function getCurrentUser(): Promise<unknown> {
+export async function getCurrentUser(): Promise<any> {
   const response = await api.get('/user-management/users/me');
   return response.data;
+}
+
+/**
+ * Fetch and update user info from /user-management/users/me
+ */
+export async function fetchAndUpdateUserInfo(): Promise<UserInfo | null> {
+  try {
+    const data = await getCurrentUser();
+    const updatedUserInfo: UserInfo = {
+      userId: data.userId || data.id,
+      email: data.email,
+      role: data.role,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    };
+    setUserInfo(updatedUserInfo);
+    return updatedUserInfo;
+  } catch (error) {
+    console.error('Failed to fetch user info:', error);
+    return null;
+  }
 }
 
 // Export as default object for convenience
@@ -168,6 +225,7 @@ const authService = {
   registerClient,
   registerTrainer,
   getCurrentUser,
+  fetchAndUpdateUserInfo,
   getToken,
   setToken,
   clearToken,

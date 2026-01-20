@@ -1,10 +1,12 @@
 import { ThemeProvider } from '@/components/theme-provider';
 import NavBar from './components/layout/NavBar';
+import { Toaster } from '@/components/ui/sonner';
 import LandingPage from './pages/LandingPage';
 import Footer from './components/layout/Footer';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import ScrollToTop from '@/components/ScrollToTop';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -84,6 +86,14 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
 
       {showLandingLayout && <Footer />}
@@ -96,6 +106,7 @@ function App() {
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AuthProvider>
         <AppContent />
+        <Toaster position="top-right" />
       </AuthProvider>
     </ThemeProvider>
   );

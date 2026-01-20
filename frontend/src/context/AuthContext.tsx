@@ -50,6 +50,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: response.email,
         role: response.role,
       });
+
+      // Fetch full user info after login
+      const fullUserInfo = await authService.fetchAndUpdateUserInfo();
+      if (fullUserInfo) {
+        setUser(fullUserInfo);
+      }
+
       return response;
     },
     []

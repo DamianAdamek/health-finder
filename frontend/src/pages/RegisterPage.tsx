@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '@/lib/authService';
@@ -18,7 +18,6 @@ import type {
   RegisterTrainerPayload,
 } from '@/lib/authService';
 import { AxiosError } from 'axios';
-import { AlertCircle } from 'lucide-react';
 import { z } from 'zod';
 import UserTypeSelector from '@/components/register/UserTypeSelector';
 import AddressFields from '@/components/register/AddressFields';
@@ -28,7 +27,6 @@ type UserType = 'client' | 'trainer';
 
 export function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [userType, setUserType] = useState<UserType>('client');
 
@@ -64,11 +62,10 @@ export function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
 
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      toast.error('Passwords do not match');
       setIsLoading(false);
       return;
     }
@@ -76,7 +73,7 @@ export function RegisterPage() {
     // Validate password strength
     const passwordResult = passwordSchema.safeParse(password);
     if (!passwordResult.success) {
-      setError(passwordResult.error.issues[0].message);
+      toast.error(passwordResult.error.issues[0].message);
       setIsLoading(false);
       return;
     }
@@ -110,8 +107,8 @@ export function RegisterPage() {
       }
 
       setSuccess(true);
-      // Redirect to login after short delay
-      setTimeout(() => navigate('/login'), 2000);
+      toast.success('Registration successful!');
+      setTimeout(() => navigate('/login'));
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string | string[] }>;
       let message = 'Registration failed. Please try again.';
@@ -123,7 +120,7 @@ export function RegisterPage() {
         message = axiosError.message;
       }
 
-      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -170,13 +167,6 @@ export function RegisterPage() {
           <form onSubmit={handleSubmit}>
             <CardContent>
               <div className="flex flex-col gap-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
                 {/* Common Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">

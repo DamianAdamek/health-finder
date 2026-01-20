@@ -9,18 +9,16 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { AxiosError } from 'axios';
-import { AlertCircle } from 'lucide-react';
 
 export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -28,10 +26,10 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
 
     try {
       await login({ email, password });
+      toast.success('Signed in successfully');
       navigate('/dashboard');
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
@@ -39,7 +37,7 @@ export function LoginPage() {
         axiosError.response?.data?.message ||
         axiosError.message ||
         'Login failed. Please try again.';
-      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -69,12 +67,6 @@ export function LoginPage() {
           <form onSubmit={handleSubmit}>
             <CardContent>
               <div className="flex flex-col gap-6">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
                 <div className="grid gap-2">
                   <Label htmlFor="email" className="text-foreground">
                     Email Address
