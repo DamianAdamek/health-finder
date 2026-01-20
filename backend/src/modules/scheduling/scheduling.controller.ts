@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SchedulingService } from './scheduling.service';
+import { RecommendationService, RecommendedTraining } from './recommendation.service';
 import {
     CreateScheduleDto,
     UpdateScheduleDto,
@@ -15,12 +16,17 @@ import { Training } from './entities/training.entity';
 import { JwtAuthGuard } from '../user-management/guards/jwt-auth.guard';
 import { RolesGuard } from '../user-management/guards/roles.guard';
 import { Roles } from '../user-management/decorators/roles.decorator';
+import { CurrentUser } from '../user-management/decorators/current-user.decorator';
+import { User } from '../user-management/entities/user.entity';
 import { UserRole } from '../../common/enums';
 
 @ApiTags('Scheduling')
 @Controller('scheduling')
 export class SchedulingController {
-    constructor(private readonly schedulingService: SchedulingService) {}
+    constructor(
+        private readonly schedulingService: SchedulingService,
+        private readonly recommendationService: RecommendationService,
+    ) {}
 
     // Schedule endpoints
     @Post('schedules')
@@ -186,5 +192,52 @@ export class SchedulingController {
     @ApiResponse({ status: 204, description: 'Training deleted' })
     async deleteTraining(@Param('id') id: string): Promise<void> {
         await this.schedulingService.deleteTraining(+id);
+    }
+
+    // Recommendation endpoints
+    @Get('recommendations/me')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get personalized training recommendations for logged-in client' })
+    @ApiResponse({
+        status: 200,
+        description: 'List of recommended trainings sorted by distance',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    training: { type: 'object' },
+                    distance: { type: 'number', description: 'Distance in kilometers' }
+                }
+            }
+        }
+    })
+    async getMyRecommendations(@CurrentUser() user: User): Promise<RecommendedTraining[]> {
+        return this.recommendationService.getRecommendationsForClient(user.client.clientId);
+    }
+
+    @Get('recommendations/:clientId')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get personalized training recommendations for specific client - Admin only' })
+    @ApiResponse({
+        status: 200,
+        description: 'List of recommended trainings sorted by distance',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    training: { type: 'object' },
+                    distance: { type: 'number', description: 'Distance in kilometers' }
+                }
+            }
+        }
+    })
+    async getRecommendationsForClient(@Param('clientId') clientId: string): Promise<RecommendedTraining[]> {
+        return this.recommendationService.getRecommendationsForClient(+clientId);
     }
 }

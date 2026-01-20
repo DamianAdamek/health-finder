@@ -9,6 +9,7 @@ import { CreateOpinionDto } from './dto/create-opinion.dto';
 import { UpdateOpinionDto } from './dto/update-opinion.dto';
 import { UserManagementService } from 'src/modules/user-management/user-management.service';
 import { SchedulingService } from 'src/modules/scheduling/scheduling.service';
+import { RecommendationService } from 'src/modules/scheduling/recommendation.service';
 
 @Injectable()
 export class EngagementService {
@@ -20,6 +21,7 @@ export class EngagementService {
     private opinionRepository: Repository<Opinion>,
     private userService: UserManagementService,
     private schedulingService: SchedulingService,
+    private recommendationService: RecommendationService,
   ) {}
 
   // Form methods
@@ -28,7 +30,17 @@ export class EngagementService {
     if (!clientExists) throw new NotFoundException(`Client with ID ${createFormDto.clientId} does not exist`);
 
     const form = this.formRepository.create(createFormDto);
-    return this.formRepository.save(form);
+    const savedForm = await this.formRepository.save(form);
+
+    // Update client's form reference
+    await this.userService.updateClient(savedForm.clientId, { formId: savedForm.formId });
+
+    // Compute recommendations when form is first created
+    await this.recommendationService.recomputeRecommendationsForClient(savedForm.clientId).catch(error => {
+      console.error(`Failed to compute recommendations for client ${savedForm.clientId}:`, error);
+    });
+
+    return savedForm;
   }
 
   async findAllForms(): Promise<Form[]> {
@@ -49,7 +61,14 @@ export class EngagementService {
     const form = await this.findForm(id);
     Object.assign(form, updateFormDto);
 
-    return this.formRepository.save(form);
+    const savedForm = await this.formRepository.save(form);
+
+    // Recompute recommendations when form preferences change
+    await this.recommendationService.recomputeRecommendationsForClient(savedForm.clientId).catch(error => {
+      console.error(`Failed to recompute recommendations for client ${savedForm.clientId}:`, error);
+    });
+
+    return savedForm;
   }
 
   async removeForm(id: number): Promise<void> {
