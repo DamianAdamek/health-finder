@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -7,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '../ui/textarea';
+import enumsService from '@/lib/enumsService';
 
 type Props = {
   specialization: string;
@@ -23,10 +25,7 @@ export default function TrainerFields({
   setDescription,
   isLoading,
 }: Props) {
-  {
-    /* TODO: fetch specializations from API */
-  }
-  const specializations = [
+  const [specializations, setSpecializations] = useState<string[]>([
     'Functional',
     'Healthy Back',
     'Cardio',
@@ -36,7 +35,33 @@ export default function TrainerFields({
     'Zumba',
     'Bodybuilding',
     'Powerlifting',
-  ];
+    'CrossFit',
+  ]);
+  const [loadingSpecs, setLoadingSpecs] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setLoadingSpecs(true);
+      try {
+        const types = await enumsService.getTrainingTypes();
+        if (mounted && Array.isArray(types) && types.length > 0) {
+          setSpecializations(types);
+        }
+      } catch (e) {
+        console.error('Failed to load training types', e);
+      } finally {
+        if (mounted) setLoadingSpecs(false);
+      }
+    }
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const disabled = isLoading || loadingSpecs;
 
   return (
     <>
@@ -54,7 +79,7 @@ export default function TrainerFields({
           <SelectTrigger
             id="specialization"
             className="w-full"
-            disabled={isLoading}
+            disabled={disabled}
           >
             <SelectValue placeholder="Select specialization..." />
           </SelectTrigger>
