@@ -14,12 +14,15 @@ export interface LoginResponse {
   role: string;
 }
 
-export interface RegisterClientPayload {
+export interface ProfilePayload {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
   contactNumber?: string;
+}
+
+export interface RegisterClientPayload extends ProfilePayload {
   city: string;
   zipCode: string;
   street: string;
@@ -27,12 +30,7 @@ export interface RegisterClientPayload {
   apartmentNumber?: string;
 }
 
-export interface RegisterTrainerPayload {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  contactNumber?: string;
+export interface RegisterTrainerPayload extends ProfilePayload {
   specialization?: string;
   description?: string;
 }
@@ -216,6 +214,11 @@ export async function fetchAndUpdateUserInfo(): Promise<UserInfo | null> {
     console.error('Failed to fetch user info:', error);
     return null;
   }
+}
+
+export async function updateProfile(profile: Partial<ProfilePayload>): Promise<UserProfile> {
+  const response = await api.patch<UserProfile>('/user-management/users/me', profile);
+  return response.data;
 }
 
 // Export as default object for convenience

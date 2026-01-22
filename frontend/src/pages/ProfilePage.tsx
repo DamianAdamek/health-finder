@@ -13,8 +13,25 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import api from '@/lib/api';
 import {
   User,
   Mail,
@@ -23,9 +40,44 @@ import {
   MapPin,
   Phone,
   Edit,
+  Plus,
   Dumbbell,
+  Building,
+  Home,
 } from 'lucide-react';
 import type { UserProfile } from '@/lib/authService';
+import {
+  fetchProfile,
+  updateUser,
+  updateClientLocation,
+  updateTrainerProfile,
+  type UpdateUserPayload,
+  type UpdateClientLocationPayload,
+  type UpdateTrainerPayload,
+} from '@/lib/profileService';
+import { TrainingFormSection } from '@/components/sections/TrainingFormSection';
+import enumsService from '@/lib/enumsService';
+
+// ===================== InfoItem Component =====================
+const InfoItem = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: any;
+  label: string;
+  value?: string;
+}) => (
+  <div className="flex items-start gap-3 py-3">
+    <div className="mt-0.5 text-muted-foreground">
+      <Icon className="h-4 w-4" />
+    </div>
+    <div className="flex-1 space-y-1">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="text-sm">{value || 'Not provided'}</p>
+    </div>
+  </div>
+);
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -33,8 +85,53 @@ function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
+  // Dialog states
+  const [isPersonalDialogOpen, setIsPersonalDialogOpen] = useState(false);
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
+  const [isTrainerDialogOpen, setIsTrainerDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Personal info form state
+  const [personalForm, setPersonalForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    contactNumber: '',
+  });
+
+  // Address form state
+  const [addressForm, setAddressForm] = useState({
+    city: '',
+    zipCode: '',
+    street: '',
+    buildingNumber: '',
+    apartmentNumber: '',
+  });
+
+  // Trainer form state
+  const [trainerForm, setTrainerForm] = useState({
+    specialization: '' as string,
+    description: '',
+  });
+
+  const [trainingTypeOptions, setTrainingTypeOptions] = useState<string[]>([]);
+
   useEffect(() => {
-    fetchProfile();
+    loadProfile();
+    // load enums used in this page (trainer specializations)
+    let mounted = true;
+    (async () => {
+      try {
+        const types = await enumsService.getTrainingTypes();
+        if (!mounted) return;
+        setTrainingTypeOptions(types);
+      } catch (err) {
+        console.error('Failed to load training types:', err);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -52,21 +149,17 @@ function ProfilePage() {
     }
   }, [location, isLoading, profile]);
 
-  const fetchProfile = async () => {
+  const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/user-management/users/me');
-      setProfile(response.data);
+      const data = await fetchProfile();
+      setProfile(data);
     } catch (error) {
       console.error('Failed to fetch profile:', error);
       toast.error('Failed to load profile data');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleEdit = () => {
-    toast.info('Edit functionality coming soon!');
   };
 
   const formatDate = (dateString?: string) => {
@@ -78,26 +171,118 @@ function ProfilePage() {
     });
   };
 
-  const InfoItem = ({
-    icon: Icon,
-    label,
-    value,
-  }: {
-    icon: any;
-    label: string;
-    value?: string;
-  }) => (
-    <div className="flex items-start gap-3 py-3">
-      <div className="mt-0.5 text-muted-foreground">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="flex-1 space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        <p className="text-sm">{value || 'Not provided'}</p>
-      </div>
-    </div>
-  );
+  // ===================== Personal Info Handlers =====================
+  const openPersonalDialog = () => {
+    setPersonalForm({
+      firstName: profile?.firstName || '',
+      lastName: profile?.lastName || '',
+      email: profile?.email || '',
+      contactNumber: profile?.contactNumber || '',
+    });
+    setIsPersonalDialogOpen(true);
+  };
 
+  const handleSavePersonal = async () => {
+    try {
+      setIsSaving(true);
+      const payload: UpdateUserPayload = {};
+
+      if (personalForm.firstName.trim())
+        payload.firstName = personalForm.firstName.trim();
+      if (personalForm.lastName.trim())
+        payload.lastName = personalForm.lastName.trim();
+      if (personalForm.contactNumber.trim())
+        payload.contactNumber = personalForm.contactNumber.trim();
+
+      await updateUser(payload);
+      await loadProfile();
+      setIsPersonalDialogOpen(false);
+      toast.success('Personal info updated successfully');
+    } catch (error) {
+      console.error('Failed to update personal info:', error);
+      toast.error('Failed to update personal info');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ===================== Address Handlers =====================
+  const openAddressDialog = () => {
+    setAddressForm({
+      city: profile?.client?.location?.city || '',
+      zipCode: profile?.client?.location?.zipCode || '',
+      street: profile?.client?.location?.street || '',
+      buildingNumber: profile?.client?.location?.buildingNumber || '',
+      apartmentNumber: profile?.client?.location?.apartmentNumber || '',
+    });
+    setIsAddressDialogOpen(true);
+  };
+
+  const handleSaveAddress = async () => {
+    if (
+      !addressForm.city.trim() ||
+      !addressForm.zipCode.trim() ||
+      !addressForm.street.trim() ||
+      !addressForm.buildingNumber.trim()
+    ) {
+      toast.error('Fields marked with * are required');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const payload: UpdateClientLocationPayload = {
+        city: addressForm.city.trim(),
+        zipCode: addressForm.zipCode.trim(),
+        street: addressForm.street.trim(),
+        buildingNumber: addressForm.buildingNumber.trim(),
+        apartmentNumber: addressForm.apartmentNumber.trim() || undefined,
+      };
+
+      await updateClientLocation(payload);
+      await loadProfile();
+      setIsAddressDialogOpen(false);
+      toast.success('Address updated successfully');
+    } catch (error) {
+      console.error('Failed to update address:', error);
+      toast.error('Address update failed');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ===================== Trainer Handlers =====================
+  const openTrainerDialog = () => {
+    setTrainerForm({
+      specialization: profile?.trainer?.specialization || '',
+      description: profile?.trainer?.description || '',
+    });
+    setIsTrainerDialogOpen(true);
+  };
+
+  const handleSaveTrainer = async () => {
+    try {
+      setIsSaving(true);
+      const payload: UpdateTrainerPayload = {};
+
+      if (trainerForm.specialization)
+        payload.specialization = trainerForm.specialization;
+      if (trainerForm.description.trim())
+        payload.description = trainerForm.description.trim();
+
+      await updateTrainerProfile(payload);
+      await loadProfile();
+      setIsTrainerDialogOpen(false);
+      toast.success('Trainer info updated successfully');
+    } catch (error) {
+      console.error('Failed to update trainer info:', error);
+      toast.error('Failed to update trainer info');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ===================== Field Definitions =====================
   const personalFields = [
     {
       label: 'Full Name',
@@ -114,7 +299,7 @@ function ProfilePage() {
     },
     {
       label: 'Role',
-      value: profile?.role.toUpperCase(),
+      value: profile?.role?.toUpperCase(),
       icon: Shield,
     },
     {
@@ -130,25 +315,22 @@ function ProfilePage() {
   ];
 
   const locationFields = [
+    { label: 'City', value: profile?.client?.location?.city, icon: MapPin },
     {
-      label: 'City',
-      value: profile?.client?.location?.city,
-    },
-    {
-      label: 'Postal Code',
+      label: 'Postal code',
       value: profile?.client?.location?.zipCode,
+      icon: MapPin,
     },
-    {
-      label: 'Street',
-      value: profile?.client?.location?.street,
-    },
+    { label: 'Street', value: profile?.client?.location?.street, icon: Home },
     {
       label: 'Building',
       value: profile?.client?.location?.buildingNumber,
+      icon: Building,
     },
     {
       label: 'Apartment',
       value: profile?.client?.location?.apartmentNumber,
+      icon: Building,
     },
   ];
 
@@ -156,7 +338,7 @@ function ProfilePage() {
     {
       label: 'Specialization',
       value: profile?.trainer?.specialization,
-      icon: User,
+      icon: Dumbbell,
     },
     {
       label: 'Description',
@@ -166,6 +348,9 @@ function ProfilePage() {
   ];
 
   const role = (profile?.role || user?.role || '').toUpperCase();
+  const hasAddress = profile?.client?.location?.city;
+  const hasTrainerDetails =
+    profile?.trainer?.specialization || profile?.trainer?.description;
 
   const clientProfileItems = [
     { title: 'Personal Information', path: '/profile#personal', icon: User },
@@ -234,7 +419,7 @@ function ProfilePage() {
                       </CardDescription>
                       <CardAction>
                         <Button
-                          onClick={handleEdit}
+                          onClick={openPersonalDialog}
                           variant="outline"
                           className="w-full sm:w-auto"
                         >
@@ -255,22 +440,52 @@ function ProfilePage() {
                     </CardContent>
                   </Card>
 
-                  {/* Client address Information */}
-                  {profile?.client?.location && (
+                  {/* Client Address Information */}
+                  {profile?.client && (
                     <Card id="address">
                       <CardHeader>
                         <CardTitle>Address</CardTitle>
-                        <CardDescription>Your location details</CardDescription>
+                        <CardDescription>Your location data</CardDescription>
+                        <CardAction>
+                          <Button
+                            onClick={openAddressDialog}
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                          >
+                            {hasAddress ? (
+                              <>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add
+                              </>
+                            )}
+                          </Button>
+                        </CardAction>
                       </CardHeader>
                       <CardContent className="divide-y">
-                        {locationFields.map((field) => (
-                          <InfoItem
-                            key={field.label}
-                            icon={MapPin}
-                            label={field.label}
-                            value={field.value}
-                          />
-                        ))}
+                        {hasAddress ? (
+                          locationFields.map((field) => (
+                            <InfoItem
+                              key={field.label}
+                              icon={field.icon}
+                              label={field.label}
+                              value={field.value}
+                            />
+                          ))
+                        ) : (
+                          <div className="py-8 text-center text-muted-foreground">
+                            <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>You haven't added your address yet.</p>
+                            <p className="text-sm mt-1">
+                              Add your address to help find local training
+                              options.
+                            </p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}
@@ -279,39 +494,59 @@ function ProfilePage() {
                   {profile?.trainer && (
                     <Card id="trainer-details">
                       <CardHeader>
-                        <CardTitle>Trainer Information</CardTitle>
-                        <CardDescription>Your trainer details</CardDescription>
+                        <CardTitle>Trainer Details</CardTitle>
+                        <CardDescription>Your trainer profile</CardDescription>
+                        <CardAction>
+                          <Button
+                            onClick={openTrainerDialog}
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                          >
+                            {hasTrainerDetails ? (
+                              <>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Complete
+                              </>
+                            )}
+                          </Button>
+                        </CardAction>
                       </CardHeader>
                       <CardContent className="divide-y">
-                        {trainerFields.map((field) => (
-                          <InfoItem
-                            key={field.label}
-                            icon={User}
-                            label={field.label}
-                            value={field.value}
-                          />
-                        ))}
+                        {hasTrainerDetails ? (
+                          trainerFields.map((field) => (
+                            <InfoItem
+                              key={field.label}
+                              icon={field.icon}
+                              label={field.label}
+                              value={field.value}
+                            />
+                          ))
+                        ) : (
+                          <div className="py-8 text-center text-muted-foreground">
+                            <Dumbbell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>
+                              You haven't completed your trainer profile yet.
+                            </p>
+                            <p className="text-sm mt-1">
+                              Complete your profile so clients can find you.
+                            </p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}
 
-                  {/* Future Form Section */}
+                  {/* Training Form Section - Separated Component */}
                   {profile?.client && (
-                    <Card id="training-form" className="border-dashed">
-                      <CardHeader>
-                        <CardTitle className="text-muted-foreground">
-                          Training Form
-                        </CardTitle>
-                        <CardDescription>
-                          More options will be available here in the future
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-center py-8 text-muted-foreground">
-                          <p className="text-sm">Form section coming soon...</p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <TrainingFormSection
+                      clientId={profile.client.clientId!}
+                      onFormUpdate={loadProfile}
+                    />
                   )}
                 </>
               )}
@@ -319,6 +554,259 @@ function ProfilePage() {
           </main>
         </div>
       </SidebarProvider>
+
+      {/* Personal Info Dialog */}
+      <Dialog
+        open={isPersonalDialogOpen}
+        onOpenChange={setIsPersonalDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Personal Information</DialogTitle>
+            <DialogDescription>
+              Update your basic information.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={personalForm.firstName}
+                onChange={(e) =>
+                  setPersonalForm((prev) => ({
+                    ...prev,
+                    firstName: e.target.value,
+                  }))
+                }
+                placeholder="John"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={personalForm.lastName}
+                onChange={(e) =>
+                  setPersonalForm((prev) => ({
+                    ...prev,
+                    lastName: e.target.value,
+                  }))
+                }
+                placeholder="Doe"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={personalForm.email}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Email cannot be changed
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contactNumber">Phone Number</Label>
+              <Input
+                id="contactNumber"
+                value={personalForm.contactNumber}
+                onChange={(e) =>
+                  setPersonalForm((prev) => ({
+                    ...prev,
+                    contactNumber: e.target.value,
+                  }))
+                }
+                placeholder="+1 555 555 5555"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsPersonalDialogOpen(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSavePersonal} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Address Dialog */}
+      <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {hasAddress ? 'Edit Address' : 'Add Address'}
+            </DialogTitle>
+            <DialogDescription>
+              {hasAddress
+                ? 'Update your address information.'
+                : 'Add your address to help find nearby training options.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={addressForm.city}
+                  onChange={(e) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      city: e.target.value,
+                    }))
+                  }
+                  placeholder="Warsaw"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="zipCode">Postal Code *</Label>
+                <Input
+                  id="zipCode"
+                  value={addressForm.zipCode}
+                  onChange={(e) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      zipCode: e.target.value,
+                    }))
+                  }
+                  placeholder="00-001"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="street">Street *</Label>
+              <Input
+                id="street"
+                value={addressForm.street}
+                onChange={(e) =>
+                  setAddressForm((prev) => ({
+                    ...prev,
+                    street: e.target.value,
+                  }))
+                }
+                placeholder="e.g. Main St"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="buildingNumber">Building Number *</Label>
+                <Input
+                  id="buildingNumber"
+                  value={addressForm.buildingNumber}
+                  onChange={(e) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      buildingNumber: e.target.value,
+                    }))
+                  }
+                  placeholder="12A"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="apartmentNumber">Apartment Number</Label>
+                <Input
+                  id="apartmentNumber"
+                  value={addressForm.apartmentNumber}
+                  onChange={(e) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      apartmentNumber: e.target.value,
+                    }))
+                  }
+                  placeholder="5"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddressDialogOpen(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAddress} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trainer Dialog */}
+      <Dialog open={isTrainerDialogOpen} onOpenChange={setIsTrainerDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {hasTrainerDetails
+                ? 'Edit Trainer Profile'
+                : 'Complete Trainer Profile'}
+            </DialogTitle>
+            <DialogDescription>
+              Provide information about your specialization and experience.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="specialization">Specialization</Label>
+              <Select
+                value={trainerForm.specialization}
+                onValueChange={(value) =>
+                  setTrainerForm((prev) => ({ ...prev, specialization: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select specialization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trainingTypeOptions.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={trainerForm.description}
+                onChange={(e) =>
+                  setTrainerForm((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                placeholder="Describe your experience, certifications, and teaching style..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsTrainerDialogOpen(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveTrainer} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

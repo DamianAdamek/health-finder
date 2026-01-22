@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY;
-const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 10000;
+const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 30000; // Increased to 30s for slow backend operations
 
 /**
  * Axios instance with base URL, timeout, and authorization interceptor
