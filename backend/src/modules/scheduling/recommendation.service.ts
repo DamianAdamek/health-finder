@@ -24,9 +24,6 @@ export class RecommendationService {
     @InjectRepository(Client)
     private clientRepository: Repository<Client>,
 
-    @InjectRepository(Form)
-    private formRepository: Repository<Form>,
-
     private locationService: LocationService,
   ) {}
 
