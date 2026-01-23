@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
 import { ActivityLevel, TrainingType } from '../../../common/enums';
 import { Client } from '../../user-management/entities/client.entity';
 
@@ -28,7 +28,6 @@ export class Form {
   @Column()
   clientId: number;
 
-  @ManyToOne(() => Client, { eager: true })
-  @JoinColumn({ name: 'clientId' })
+  @OneToOne(() => Client, (client) => client.form)
   client: Client;
 }
