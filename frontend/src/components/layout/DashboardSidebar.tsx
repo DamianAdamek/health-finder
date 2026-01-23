@@ -1,4 +1,4 @@
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   Sidebar,
@@ -27,6 +27,9 @@ import { useNavigate } from 'react-router-dom';
 import { ModeToggle } from '../ui/mode-toggle';
 
 const sidebarItems = [{ title: 'Home', path: '/dashboard', icon: Home }];
+const adminItems = [
+  { title: 'User Management', path: '/admin/users', icon: Shield },
+];
 
 export function DashboardSidebar({
   profileItems,
@@ -73,11 +76,35 @@ export function DashboardSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {user?.role === 'admin' && (
+          <SidebarGroup className="mt-6">
+            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <Link to={item.path} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Profile Section */}
         {profileItems && profileItems.length && (
           <SidebarGroup className="mt-6">
             <SidebarGroupLabel>
-              {user?.role === 'TRAINER' ? 'Trainer Profile' : 'Client Profile'}
+              {user?.role === 'trainer'
+                ? 'Trainer Profile'
+                : user?.role === 'admin'
+                  ? 'User Management'
+                  : 'Client Profile'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
