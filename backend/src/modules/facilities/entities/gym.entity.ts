@@ -13,9 +13,9 @@ import {
 } from 'typeorm';
 import { Location } from './location.entity';
 import { Room } from './room.entity';
-import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
-import { GymAdmin } from 'src/modules/user-management/entities/gym-admin.entity';
-import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
+import { Trainer } from '../../user-management/entities/trainer.entity';
+import { GymAdmin } from '../../user-management/entities/gym-admin.entity';
+import { Schedule } from '../../scheduling/entities/schedule.entity';
 
 @Entity('gyms')
 export class Gym {

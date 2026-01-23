@@ -4,7 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Gym } from './entities/gym.entity';
 import { Location } from './entities/location.entity';
 import { Room } from './entities/room.entity';
-import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
+import { Schedule } from '../scheduling/entities/schedule.entity';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
 import { CreateLocationDto } from './dto/create-location.dto';

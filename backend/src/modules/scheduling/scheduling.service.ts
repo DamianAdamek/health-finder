@@ -4,10 +4,10 @@ import { Repository, In, DataSource, Not, IsNull } from 'typeorm';
 import { Schedule } from './entities/schedule.entity';
 import { Window } from './entities/window.entity';
 import { Training } from './entities/training.entity';
-import { Room } from 'src/modules/facilities/entities/room.entity';
-import { Gym } from 'src/modules/facilities/entities/gym.entity';
-import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
-import { Client } from 'src/modules/user-management/entities/client.entity';
+import { Room } from '../facilities/entities/room.entity';
+import { Gym } from '../facilities/entities/gym.entity';
+import { Trainer } from '../user-management/entities/trainer.entity';
+import { Client } from '../user-management/entities/client.entity';
 import { TrainingStatus } from '../../common/enums/training-status.enum';
 import {
     CreateScheduleDto,
@@ -17,7 +17,7 @@ import {
     CreateTrainingDto,
     UpdateTrainingDto,
 } from './dto';
-import { DayOfWeek } from 'src/common/enums';
+import { DayOfWeek } from '../../common/enums';
 
 @Injectable()
 export class SchedulingService {

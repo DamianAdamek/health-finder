@@ -8,8 +8,8 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { TrainingType } from '../../../common/enums';
-import { Gym } from 'src/modules/facilities/entities/gym.entity';
-import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
+import { Gym } from '../../facilities/entities/gym.entity';
+import { Schedule } from '../../scheduling/entities/schedule.entity';
 
 @Entity('trainers')
 export class Trainer {

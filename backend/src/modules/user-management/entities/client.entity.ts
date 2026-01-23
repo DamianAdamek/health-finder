@@ -1,8 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
-import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
-import { Location } from 'src/modules/facilities/entities/location.entity';
-import { Form } from 'src/modules/engagement/entities/form.entity';
+import { Schedule } from '../../scheduling/entities/schedule.entity';
+import { Location } from '../../facilities/entities/location.entity';
+import { Form } from '../../engagement/entities/form.entity';
 
 @Entity('clients')
 export class Client {

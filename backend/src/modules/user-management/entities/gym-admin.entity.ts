@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToMany } from 'typeorm';
 import { User } from './user.entity';
-import { Gym } from 'src/modules/facilities/entities/gym.entity';
+import { Gym } from '../../facilities/entities/gym.entity';
 
 @Entity('gym_admins')
 export class GymAdmin {

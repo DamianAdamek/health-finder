@@ -7,9 +7,9 @@ import { CreateFormDto } from './dto/create-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
 import { CreateOpinionDto } from './dto/create-opinion.dto';
 import { UpdateOpinionDto } from './dto/update-opinion.dto';
-import { UserManagementService } from 'src/modules/user-management/user-management.service';
-import { SchedulingService } from 'src/modules/scheduling/scheduling.service';
-import { RecommendationService } from 'src/modules/scheduling/recommendation.service';
+import { UserManagementService } from '../user-management/user-management.service';
+import { SchedulingService } from '../scheduling/scheduling.service';
+import { RecommendationService } from '../scheduling/recommendation.service';
 
 @Injectable()
 export class EngagementService {
