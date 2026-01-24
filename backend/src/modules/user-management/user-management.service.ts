@@ -157,14 +157,14 @@ export class UserManagementService {
 
   findAllUsers() {
     return this.userRepository.find({
-      relations: ['trainer', 'client'], // Pobieramy też profil
+      relations: ['trainer', 'trainer.schedule', 'client', 'client.schedule'],
     });
   }
 
   async findOneUser(id: number) {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ['trainer', 'client'],
+      relations: ['trainer', 'trainer.schedule', 'client', 'client.schedule', 'client.location'],
     });
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);
     return user;
@@ -195,14 +195,14 @@ export class UserManagementService {
 
   findAllTrainers() {
     return this.trainerRepository.find({
-      relations: ['user'], // Chcemy widzieć imię i nazwisko trenera
+      relations: ['user', 'gyms', 'gyms.location', 'gyms.rooms', 'schedule'],
     });
   }
 
   async findOneTrainer(id: number) {
     const trainer = await this.trainerRepository.findOne({
       where: { trainerId: id },
-      relations: ['user'],
+      relations: ['user', 'gyms', 'gyms.location', 'gyms.rooms', 'schedule'],
     });
     if (!trainer) throw new NotFoundException(`Trainer with ID ${id} not found`);
     return trainer;

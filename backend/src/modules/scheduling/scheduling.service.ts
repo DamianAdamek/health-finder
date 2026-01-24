@@ -205,7 +205,7 @@ export class SchedulingService {
     async getScheduleById(id: number): Promise<Schedule> {
         const schedule = await this.scheduleRepository.findOne({
             where: { scheduleId: id },
-            relations: ['windows', 'trainings'],
+            relations: ['windows', 'windows.training'],
         });
         if (!schedule) {
             throw new NotFoundException(`Schedule with ID ${id} not found`);

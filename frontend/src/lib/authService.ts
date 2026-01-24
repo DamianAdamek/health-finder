@@ -43,6 +43,31 @@ export interface UserInfo {
   lastName?: string;
 }
 
+export interface GymLocation {
+  locationId?: number;
+  city?: string;
+  zipCode?: string;
+  street?: string;
+  buildingNumber?: string;
+  apartmentNumber?: string;
+}
+
+export interface GymRoom {
+  roomId: number;
+  name: string;
+  capacity?: number;
+  gymId: number;
+}
+
+export interface TrainerGym {
+  gymId: number;
+  name: string;
+  description?: string;
+  rules?: string;
+  location?: GymLocation;
+  rooms?: GymRoom[];
+}
+
 export interface UserProfile {
   id: number;
   firstName?: string;
@@ -54,9 +79,11 @@ export interface UserProfile {
     trainerId?: number;
     specialization?: string;
     description?: string;
+    rating?: number;
     schedule?: {
       scheduleId?: number;
     };
+    gyms?: TrainerGym[];
   };
   client?: {
     clientId?: number;

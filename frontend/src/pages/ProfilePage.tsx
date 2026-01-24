@@ -44,6 +44,7 @@ import {
   Dumbbell,
   Building,
   Home,
+  Clock,
 } from 'lucide-react';
 import type { UserProfile } from '@/lib/authService';
 import {
@@ -56,6 +57,7 @@ import {
   type UpdateTrainerPayload,
 } from '@/lib/profileService';
 import { TrainingFormSection } from '@/components/sections/TrainingFormSection';
+import { AvailabilitySchedule } from '@/components/sections/AvailabilitySchedule';
 import enumsService from '@/lib/enumsService';
 
 // ===================== InfoItem Component =====================
@@ -355,6 +357,7 @@ function ProfilePage() {
   const clientProfileItems = [
     { title: 'Personal Information', path: '/profile#personal', icon: User },
     { title: 'Address', path: '/profile#address', icon: MapPin },
+    { title: 'Availability', path: '/profile#availability', icon: Clock },
     { title: 'Training Form', path: '/profile#training-form', icon: Dumbbell },
   ];
 
@@ -369,6 +372,7 @@ function ProfilePage() {
       path: '/profile#trainer-details',
       icon: Dumbbell,
     },
+    { title: 'Schedule', path: '/profile#schedule', icon: Calendar },
   ];
 
   const profileItems =
@@ -547,6 +551,32 @@ function ProfilePage() {
                         )}
                       </CardContent>
                     </Card>
+                  )}
+
+                  {/* Trainer Schedule Section */}
+                  {profile?.trainer && (
+                    <div id="schedule">
+                      <AvailabilitySchedule
+                        scheduleId={profile.trainer.schedule?.scheduleId}
+                        title="Harmonogram dostępności"
+                        description="Okna czasowe, w których jesteś dostępny dla klientów"
+                        isTrainer={true}
+                        onScheduleChange={loadProfile}
+                      />
+                    </div>
+                  )}
+
+                  {/* Client Availability Section */}
+                  {profile?.client && (
+                    <div id="availability">
+                      <AvailabilitySchedule
+                        scheduleId={profile.client.schedule?.scheduleId}
+                        title="Moja dostępność"
+                        description="Określ kiedy możesz mieć treningi"
+                        isTrainer={false}
+                        onScheduleChange={loadProfile}
+                      />
+                    </div>
                   )}
 
                   {/* Training Form Section - Separated Component */}
