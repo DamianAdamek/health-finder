@@ -304,8 +304,6 @@ export function ClientTrainings({ onTrainingChange }: ClientTrainingsProps) {
             <span>
               {training.trainer.user?.firstName}{' '}
               {training.trainer.user?.lastName}
-              {training.trainer.specialization &&
-                ` (${training.trainer.specialization})`}
             </span>
           </div>
         )}
@@ -375,8 +373,6 @@ export function ClientTrainings({ onTrainingChange }: ClientTrainingsProps) {
               <span>
                 {training.trainer.user?.firstName}{' '}
                 {training.trainer.user?.lastName}
-                {training.trainer.specialization &&
-                  ` (${training.trainer.specialization})`}
               </span>
             </div>
           )}
