@@ -6,6 +6,7 @@ import { RecommendationService } from './recommendation.service';
 import { Schedule } from './entities/schedule.entity';
 import { Window } from './entities/window.entity';
 import { Training } from './entities/training.entity';
+import { CompletedTraining } from './entities/completed-training.entity';
 import { Room } from 'src/modules/facilities/entities/room.entity';
 import { Gym } from 'src/modules/facilities/entities/gym.entity';
 import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
@@ -15,11 +16,11 @@ import { CommonModule } from 'src/common/common.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Schedule, Window, Training, Room, Gym, Trainer, Client, Form]),
+        TypeOrmModule.forFeature([Schedule, Window, Training, CompletedTraining, Room, Gym, Trainer, Client, Form]),
         CommonModule,
     ],
     controllers: [SchedulingController],
     providers: [SchedulingService, RecommendationService],
-    exports: [SchedulingService, RecommendationService],
+    exports: [SchedulingService, RecommendationService, TypeOrmModule],
 })
 export class SchedulingModule {}

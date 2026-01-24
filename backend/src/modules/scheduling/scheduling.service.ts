@@ -4,6 +4,7 @@ import { Repository, In, DataSource, Not, IsNull } from 'typeorm';
 import { Schedule } from './entities/schedule.entity';
 import { Window } from './entities/window.entity';
 import { Training } from './entities/training.entity';
+import { CompletedTraining } from './entities/completed-training.entity';
 import { Room } from 'src/modules/facilities/entities/room.entity';
 import { Gym } from 'src/modules/facilities/entities/gym.entity';
 import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
@@ -17,6 +18,7 @@ import {
     UpdateWindowDto,
     CreateTrainingDto,
     UpdateTrainingDto,
+    CreateCompletedTrainingDto,
 } from './dto';
 import { DayOfWeek } from 'src/common/enums';
 
@@ -29,6 +31,8 @@ export class SchedulingService {
             private windowRepository: Repository<Window>,
             @InjectRepository(Training)
             private trainingRepository: Repository<Training>,
+            @InjectRepository(CompletedTraining)
+            private completedTrainingRepository: Repository<CompletedTraining>,
             @InjectRepository(Room)
             private roomRepository: Repository<Room>,
             @InjectRepository(Gym)
@@ -800,5 +804,83 @@ export class SchedulingService {
         result.setHours(hours, minutes, 0, 0);
         
         return result;
+    }
+
+    // CompletedTraining CRUD
+    async createCompletedTraining(dto: CreateCompletedTrainingDto): Promise<CompletedTraining> {
+        const training = await this.trainingRepository.findOne({
+            where: { trainingId: dto.trainingId },
+            relations: ['room', 'room.gym', 'trainer', 'clients'],
+        });
+
+        if (!training) {
+            throw new NotFoundException(`Training with ID ${dto.trainingId} not found`);
+        }
+
+        const client = await this.clientRepository.findOne({
+            where: { clientId: dto.clientId },
+        });
+
+        if (!client) {
+            throw new NotFoundException(`Client with ID ${dto.clientId} not found`);
+        }
+
+        const isClientInTraining = training.clients?.some(c => c.clientId === dto.clientId);
+        if (!isClientInTraining) {
+            throw new BadRequestException(`Client with ID ${dto.clientId} is not registered for this training`);
+        }
+
+        const completedTraining = this.completedTrainingRepository.create({
+            price: training.price,
+            type: training.type,
+            trainingDate: new Date(dto.trainingDate),
+            gymName: training.room?.gym?.name || '',
+            client,
+            trainer: training.trainer,
+        });
+
+        return this.completedTrainingRepository.save(completedTraining);
+    }
+
+    async getAllCompletedTrainings(): Promise<CompletedTraining[]> {
+        return this.completedTrainingRepository.find({
+            relations: ['client', 'trainer'],
+        });
+    }
+
+    async getCompletedTrainingById(id: number): Promise<CompletedTraining> {
+        const completedTraining = await this.completedTrainingRepository.findOne({
+            where: { completedTrainingId: id },
+            relations: ['client', 'trainer'],
+        });
+
+        if (!completedTraining) {
+            throw new NotFoundException(`Completed training with ID ${id} not found`);
+        }
+
+        return completedTraining;
+    }
+
+    async getCompletedTrainingsForClient(clientId: number): Promise<CompletedTraining[]> {
+        const client = await this.clientRepository.findOne({
+            where: { clientId },
+        });
+
+        if (!client) {
+            throw new NotFoundException(`Client with ID ${clientId} not found`);
+        }
+
+        return this.completedTrainingRepository.find({
+            where: { client: { clientId } },
+            relations: ['client', 'trainer'],
+            order: { trainingDate: 'DESC' },
+        });
+    }
+
+    async deleteCompletedTraining(id: number): Promise<void> {
+        const result = await this.completedTrainingRepository.delete(id);
+        if (result.affected === 0) {
+            throw new NotFoundException(`Completed training with ID ${id} not found`);
+        }
     }
 }
