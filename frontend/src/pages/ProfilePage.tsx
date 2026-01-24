@@ -358,6 +358,10 @@ function ProfilePage() {
     { title: 'Training Form', path: '/profile#training-form', icon: Dumbbell },
   ];
 
+  const gymAdminProfileItems = [
+    { title: 'Personal Information', path: '/profile#personal', icon: User },
+  ];
+
   const trainerProfileItems = [
     { title: 'Personal Information', path: '/profile#personal', icon: User },
     {
@@ -368,7 +372,11 @@ function ProfilePage() {
   ];
 
   const profileItems =
-    role === 'TRAINER' ? trainerProfileItems : clientProfileItems;
+    role === 'CLIENT'
+      ? clientProfileItems
+      : role === 'TRAINER'
+        ? trainerProfileItems
+        : gymAdminProfileItems;
 
   return (
     <div className="min-h-screen flex flex-col">

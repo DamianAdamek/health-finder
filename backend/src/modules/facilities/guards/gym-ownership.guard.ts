@@ -42,9 +42,10 @@ export class GymOwnershipGuard implements CanActivate {
       throw new ForbiddenException('Gym ID not found in request');
     }
 
-    // Load GymAdmin with their gyms
+    // Load GymAdmin with their gyms. Support tokens that expose either `id` or `userId`.
+    const userId = Number(user?.id ?? user?.userId);
     const gymAdmin = await this.gymAdminRepository.findOne({
-      where: { user: { id: user.id } },
+      where: { user: { id: userId } },
       relations: ['gyms'],
     });
 

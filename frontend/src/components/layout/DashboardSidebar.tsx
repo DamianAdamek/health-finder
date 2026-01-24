@@ -1,4 +1,4 @@
-import { LogOut, Settings, Shield } from 'lucide-react';
+import { LogOut, Settings, Shield, Building } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   Sidebar,
@@ -29,6 +29,10 @@ import { ModeToggle } from '../ui/mode-toggle';
 const sidebarItems = [{ title: 'Home', path: '/dashboard', icon: Home }];
 const adminItems = [
   { title: 'User Management', path: '/admin/users', icon: Shield },
+  { title: 'Gym Management', path: '/admin/gyms', icon: Building },
+];
+const gymAdminItems = [
+  { title: 'Gym Management', path: '/admin/gyms', icon: Building },
 ];
 
 export function DashboardSidebar({
@@ -96,6 +100,26 @@ export function DashboardSidebar({
           </SidebarGroup>
         )}
 
+        {user?.role === 'gym_admin' && (
+          <SidebarGroup className="mt-6">
+            <SidebarGroupLabel>Gym Administration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {gymAdminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <Link to={item.path} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Profile Section */}
         {profileItems && profileItems.length && (
           <SidebarGroup className="mt-6">
@@ -104,7 +128,9 @@ export function DashboardSidebar({
                 ? 'Trainer Profile'
                 : user?.role === 'admin'
                   ? 'User Management'
-                  : 'Client Profile'}
+                  : user?.role === 'gym_admin'
+                    ? 'Gym Administration'
+                    : 'Profile'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
