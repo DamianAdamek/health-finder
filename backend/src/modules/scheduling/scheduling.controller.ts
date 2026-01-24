@@ -9,10 +9,12 @@ import {
     UpdateWindowDto,
     CreateTrainingDto,
     UpdateTrainingDto,
+    CreateCompletedTrainingDto,
 } from './dto';
 import { Schedule } from './entities/schedule.entity';
 import { Window } from './entities/window.entity';
 import { Training } from './entities/training.entity';
+import { CompletedTraining } from './entities/completed-training.entity';
 import { JwtAuthGuard } from '../user-management/guards/jwt-auth.guard';
 import { RolesGuard } from '../user-management/guards/roles.guard';
 import { Roles } from '../user-management/decorators/roles.decorator';
@@ -163,6 +165,28 @@ export class SchedulingController {
         return this.schedulingService.getAllTrainings();
     }
 
+    // Trainer Training Management endpoints - MUST be before :id routes
+    @Get('trainings/trainer')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.TRAINER)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get all trainings for logged-in trainer' })
+    @ApiResponse({ status: 200, description: 'List of trainer trainings', type: [Training] })
+    async getMyTrainerTrainings(@CurrentUser() user: User): Promise<Training[]> {
+        return this.schedulingService.getTrainingsForTrainer(user.trainer.trainerId);
+    }
+
+    // Client Training Management endpoints - MUST be before :id routes
+    @Get('trainings/my')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get all trainings for logged-in client' })
+    @ApiResponse({ status: 200, description: 'List of client trainings', type: [Training] })
+    async getMyTrainings(@CurrentUser() user: User): Promise<Training[]> {
+        return this.schedulingService.getTrainingsForClient(user.client.clientId);
+    }
+
     @Get('trainings/:id')
     @ApiOperation({ summary: 'Get training by ID - Public' })
     @ApiResponse({ status: 200, description: 'Training', type: Training })
@@ -239,5 +263,97 @@ export class SchedulingController {
     })
     async getRecommendationsForClient(@Param('clientId') clientId: string): Promise<RecommendedTraining[]> {
         return this.recommendationService.getRecommendationsForClient(+clientId);
+    }
+
+    // Client Training Sign-up and Cancel endpoints
+    @Post('trainings/:id/sign-up')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Sign up for a training' })
+    @ApiResponse({ status: 200, description: 'Successfully signed up', type: Training })
+    async signUpForTraining(
+        @Param('id') id: string,
+        @CurrentUser() user: User,
+    ): Promise<Training> {
+        return this.schedulingService.signUpForTraining(+id, user.client.clientId);
+    }
+
+    @Post('trainings/:id/cancel')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Cancel reservation for a training (24h policy)' })
+    @ApiResponse({ status: 200, description: 'Successfully cancelled', type: Training })
+    async cancelReservation(
+        @Param('id') id: string,
+        @CurrentUser() user: User,
+    ): Promise<Training> {
+        return this.schedulingService.cancelReservation(+id, user.client.clientId);
+    }
+
+    // Completed Training endpoints
+    @Post('completed-trainings')
+    @HttpCode(201)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Archive a training as completed' })
+    @ApiResponse({ status: 201, description: 'Completed trainings created', type: [CompletedTraining] })
+    async createCompletedTraining(
+        @Body() dto: CreateCompletedTrainingDto,
+    ): Promise<CompletedTraining[]> {
+        return this.schedulingService.createCompletedTraining(dto);
+    }
+
+    @Get('completed-trainings')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get all completed trainings' })
+    @ApiResponse({ status: 200, description: 'List of completed trainings', type: [CompletedTraining] })
+    async getAllCompletedTrainings(): Promise<CompletedTraining[]> {
+        return this.schedulingService.getAllCompletedTrainings();
+    }
+
+    @Get('completed-trainings/my')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get completed trainings for logged-in client' })
+    @ApiResponse({ status: 200, description: 'List of completed trainings', type: [CompletedTraining] })
+    async getMyCompletedTrainings(@CurrentUser() user: User): Promise<CompletedTraining[]> {
+        return this.schedulingService.getCompletedTrainingsForClient(user.client.clientId);
+    }
+
+    @Get('completed-trainings/trainer')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.TRAINER)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get completed trainings for logged-in trainer' })
+    @ApiResponse({ status: 200, description: 'List of completed trainings', type: [CompletedTraining] })
+    async getMyTrainerCompletedTrainings(@CurrentUser() user: User): Promise<CompletedTraining[]> {
+        return this.schedulingService.getCompletedTrainingsForTrainer(user.trainer.trainerId);
+    }
+
+    @Get('completed-trainings/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT, UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get completed training by ID' })
+    @ApiResponse({ status: 200, description: 'Completed training', type: CompletedTraining })
+    async getCompletedTrainingById(@Param('id') id: string): Promise<CompletedTraining> {
+        return this.schedulingService.getCompletedTrainingById(+id);
+    }
+
+    @Delete('completed-trainings/:id')
+    @HttpCode(204)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete completed training - Admin only' })
+    @ApiResponse({ status: 204, description: 'Completed training deleted' })
+    async deleteCompletedTraining(@Param('id') id: string): Promise<void> {
+        await this.schedulingService.deleteCompletedTraining(+id);
     }
 }

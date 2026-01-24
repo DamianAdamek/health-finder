@@ -1,16 +1,14 @@
-version: '3.8'
-
 services:
   # --- BACKEND (NestJS) ---
   api:
     build:
-      context: ./backend      # <--- ZMIANA: Wskazujemy folder backendu
+      context: ./backend
       dockerfile: Dockerfile
     container_name: gym-backend
     ports:
       - "3000:3000"
     volumes:
-      - ./backend:/usr/src/app              # <--- ZMIANA: Mapujemy folder backendu
+      - ./backend:/usr/src/app
       - /usr/src/app/node_modules
     environment:
       - DB_HOST=postgres
@@ -23,7 +21,7 @@ services:
     networks:
       - gym-network
 
-  # --- BAZA DANYCH (PostgreSQL) ---
+  # --- DATABASE (PostgreSQL) ---
   postgres:
     image: postgres:15-alpine
     container_name: gym-db
@@ -38,17 +36,23 @@ services:
     networks:
       - gym-network
 
-  # --- FRONTEND (Przyszłość) ---
-  # web:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "8080:80"
-  #   depends_on:
-  #     - api
-  #   networks:
-  #     - gym-network
+  # --- FRONTEND (Vite) ---
+  frontend:
+    image: node:20-alpine
+    container_name: gym-frontend
+    working_dir: /usr/src/app
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "5173:5173" # (Vite default 5173)
+    environment:
+      - NODE_ENV=development
+    command: sh -c "npm ci --silent && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - api
+    networks:
+      - gym-network
 
 volumes:
   postgres_data:

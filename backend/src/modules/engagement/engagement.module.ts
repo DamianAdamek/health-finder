@@ -6,9 +6,10 @@ import { EngagementService } from './engagement.service';
 import { EngagementController } from './engagement.controller';
 import { UserManagementModule } from '../user-management/user-management.module';
 import { SchedulingModule } from '../scheduling/scheduling.module';
+import { CompletedTraining } from '../scheduling/entities/completed-training.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Form, Opinion]), UserManagementModule, SchedulingModule],
+  imports: [TypeOrmModule.forFeature([Form, Opinion, CompletedTraining]), UserManagementModule, SchedulingModule],
   controllers: [EngagementController],
   providers: [EngagementService],
   exports: [EngagementService],

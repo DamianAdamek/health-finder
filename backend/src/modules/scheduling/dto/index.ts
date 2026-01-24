@@ -4,3 +4,4 @@ export * from './create-window.dto';
 export * from './update-window.dto';
 export * from './create-training.dto';
 export * from './update-training.dto';
+export * from './create-completed-training.dto';

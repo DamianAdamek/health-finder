@@ -56,7 +56,7 @@ export class Training {
     )
     clients: Client[];
 
-    @OneToOne(() => Window, { nullable: true })
+    @OneToOne(() => Window, (window) => window.training, { nullable: true })
     window?: Window;
 
     @CreateDateColumn()

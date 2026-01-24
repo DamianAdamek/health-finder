@@ -7,9 +7,9 @@ import { CreateFormDto } from './dto/create-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
 import { CreateOpinionDto } from './dto/create-opinion.dto';
 import { UpdateOpinionDto } from './dto/update-opinion.dto';
-import { UserManagementService } from '../user-management/user-management.service';
-import { SchedulingService } from '../scheduling/scheduling.service';
-import { RecommendationService } from '../scheduling/recommendation.service';
+import { UserManagementService } from 'src/modules/user-management/user-management.service';
+import { RecommendationService } from 'src/modules/scheduling/recommendation.service';
+import { CompletedTraining } from 'src/modules/scheduling/entities/completed-training.entity';
 
 @Injectable()
 export class EngagementService {
@@ -19,8 +19,11 @@ export class EngagementService {
 
     @InjectRepository(Opinion)
     private opinionRepository: Repository<Opinion>,
+
+    @InjectRepository(CompletedTraining)
+    private completedTrainingRepository: Repository<CompletedTraining>,
+
     private userService: UserManagementService,
-    private schedulingService: SchedulingService,
     private recommendationService: RecommendationService,
   ) {}
 
@@ -73,7 +76,7 @@ export class EngagementService {
 
   // Opinion methods
   async createOpinion(createOpinionDto: CreateOpinionDto): Promise<Opinion> {
-    const { clientId, trainerId } = createOpinionDto;
+    const { clientId, trainerId, rating, comment } = createOpinionDto;
 
     const clientExists = await this.userService.clientExists(clientId);
     if (!clientExists) throw new NotFoundException(`Client with ID ${clientId} does not exist`);
@@ -81,13 +84,30 @@ export class EngagementService {
     const trainerExists = await this.userService.trainerExists(trainerId);
     if (!trainerExists) throw new NotFoundException(`Trainer with ID ${trainerId} does not exist`);
 
-    const hasCompleted = await this.schedulingService.clientHasCompletedWithTrainer(clientId, trainerId);
-    if (!hasCompleted) {
+    const completedTraining = await this.completedTrainingRepository.findOne({
+      where: {
+        client: { clientId },
+        trainer: { trainerId },
+      },
+    });
+
+    if (!completedTraining) {
       throw new BadRequestException('Client must have at least one completed training with this trainer to leave an opinion');
     }
 
-    const opinion = this.opinionRepository.create(createOpinionDto);
-    return this.opinionRepository.save(opinion);
+    const opinion = this.opinionRepository.create({
+      rating,
+      comment,
+      clientId,
+      trainerId,
+    });
+
+    const savedOpinion = await this.opinionRepository.save(opinion);
+    
+    // Update trainer's average rating
+    await this.updateTrainerRating(trainerId);
+    
+    return savedOpinion;
   }
 
   async findAllOpinions(): Promise<Opinion[]> {
@@ -106,13 +126,38 @@ export class EngagementService {
 
   async updateOpinion(id: number, updateOpinionDto: UpdateOpinionDto): Promise<Opinion> {
     const opinion = await this.findOpinion(id);
+    const trainerId = opinion.trainerId;
     Object.assign(opinion, updateOpinionDto);
 
-    return this.opinionRepository.save(opinion);
+    const updatedOpinion = await this.opinionRepository.save(opinion);
+    
+    // Update trainer's average rating
+    await this.updateTrainerRating(trainerId);
+    
+    return updatedOpinion;
   }
 
   async removeOpinion(id: number): Promise<void> {
     const opinion = await this.findOpinion(id);
+    const trainerId = opinion.trainerId;
     await this.opinionRepository.remove(opinion);
+    
+    // Update trainer's average rating
+    await this.updateTrainerRating(trainerId);
+  }
+
+  // Helper method to update trainer's average rating
+  private async updateTrainerRating(trainerId: number): Promise<void> {
+    const opinions = await this.opinionRepository.find({
+      where: { trainerId },
+    });
+
+    let averageRating = 0;
+    if (opinions.length > 0) {
+      const totalRating = opinions.reduce((sum, opinion) => sum + opinion.rating, 0);
+      averageRating = totalRating / opinions.length;
+    }
+
+    await this.userService.updateTrainer(trainerId, { rating: averageRating });
   }
 }

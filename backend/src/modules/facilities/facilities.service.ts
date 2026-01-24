@@ -1,16 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { Gym } from './entities/gym.entity';
 import { Location } from './entities/location.entity';
 import { Room } from './entities/room.entity';
-import { Schedule } from '../scheduling/entities/schedule.entity';
+import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
+import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
+import { GymAdmin } from 'src/modules/user-management/entities/gym-admin.entity';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
+import { UserRole } from 'src/common/enums';
 
 @Injectable()
 export class FacilitiesService {
@@ -27,26 +30,50 @@ export class FacilitiesService {
     @InjectRepository(Schedule)
     private scheduleRepository: Repository<any>,
 
+    @InjectRepository(Trainer)
+    private trainerRepository: Repository<Trainer>,
+
+    @InjectRepository(GymAdmin)
+    private gymAdminRepository: Repository<GymAdmin>,
+
     private dataSource: DataSource,
   ) {}
 
   // Gym methods
-  async createGym(createGymDto: CreateGymDto): Promise<Gym> {
+  async createGym(createGymDto: CreateGymDto, user?: any): Promise<Gym> {
     const schedule = this.scheduleRepository.create();
     await this.scheduleRepository.save(schedule);
 
     const gym = this.gymRepository.create({ ...createGymDto, schedule });
-    return this.gymRepository.save(gym);
+    const savedGym = await this.gymRepository.save(gym);
+
+    // If the user is a GYM_ADMIN, automatically assign this gym to them
+    if (user && user.role === UserRole.GYM_ADMIN) {
+      const gymAdmin = await this.gymAdminRepository.findOne({
+        where: { user: { id: user.id } },
+        relations: ['gyms'],
+      });
+
+      if (gymAdmin) {
+        if (!gymAdmin.gyms) {
+          gymAdmin.gyms = [];
+        }
+        gymAdmin.gyms.push(savedGym);
+        await this.gymAdminRepository.save(gymAdmin);
+      }
+    }
+
+    return savedGym;
   }
 
   async findAllGyms(): Promise<Gym[]> {
-    return this.gymRepository.find({ relations: ['location', 'rooms'] });
+    return this.gymRepository.find({ relations: ['location', 'rooms', 'trainers', 'trainers.user'] });
   }
 
   async findGym(id: number): Promise<Gym> {
     const gym = await this.gymRepository.findOne({
       where: { gymId: id },
-      relations: ['location', 'rooms'],
+      relations: ['location', 'rooms', 'trainers', 'trainers.user'],
     });
 
     if (!gym) {
@@ -58,7 +85,24 @@ export class FacilitiesService {
 
   async updateGym(id: number, updateGymDto: UpdateGymDto): Promise<Gym> {
     const gym = await this.findGym(id);
-    Object.assign(gym, updateGymDto);
+    
+    // Handle trainers separately if provided
+    if (updateGymDto.trainers !== undefined) {
+      const trainerIds = updateGymDto.trainers;
+      if (trainerIds.length > 0) {
+        const trainers = await this.trainerRepository.find({
+          where: { trainerId: In(trainerIds) },
+        });
+        gym.trainers = trainers;
+      } else {
+        gym.trainers = [];
+      }
+      // Remove trainers from the DTO so Object.assign doesn't overwrite
+      const { trainers, ...restDto } = updateGymDto;
+      Object.assign(gym, restDto);
+    } else {
+      Object.assign(gym, updateGymDto);
+    }
 
     return this.gymRepository.save(gym);
   }
