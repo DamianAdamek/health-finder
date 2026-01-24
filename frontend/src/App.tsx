@@ -9,6 +9,7 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import UserManagementPage from './pages/UserManagementPage';
 import GymsAdminPage from './pages/GymsAdminPage';
+import TrainersPage from './pages/TrainersPage';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import ScrollToTop from '@/components/ScrollToTop';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -109,6 +110,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <GymsAdminPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainers"
+          element={
+            <ProtectedRoute>
+              <TrainersPage />
             </ProtectedRoute>
           }
         />

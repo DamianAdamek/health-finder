@@ -630,6 +630,45 @@ export class SchedulingService {
         await this.trainingRepository.delete(id);
     }
 
+    // Trainer Training Management
+    async getTrainingsForTrainer(trainerId: number): Promise<Training[]> {
+        const trainer = await this.trainerRepository.findOne({
+            where: { trainerId },
+        });
+        if (!trainer) {
+            throw new NotFoundException(`Trainer with ID ${trainerId} not found`);
+        }
+
+        return this.trainingRepository
+            .createQueryBuilder('training')
+            .leftJoinAndSelect('training.room', 'room')
+            .leftJoinAndSelect('room.gym', 'gym')
+            .leftJoinAndSelect('gym.location', 'location')
+            .leftJoinAndSelect('training.trainer', 'trainer')
+            .leftJoinAndSelect('trainer.user', 'trainerUser')
+            .leftJoinAndSelect('training.window', 'window')
+            .leftJoinAndSelect('training.clients', 'clients')
+            .leftJoinAndSelect('clients.user', 'clientUser')
+            .where('trainer.trainerId = :trainerId', { trainerId })
+            .orderBy('training.createdAt', 'DESC')
+            .getMany();
+    }
+
+    async getCompletedTrainingsForTrainer(trainerId: number): Promise<CompletedTraining[]> {
+        const trainer = await this.trainerRepository.findOne({
+            where: { trainerId },
+        });
+        if (!trainer) {
+            throw new NotFoundException(`Trainer with ID ${trainerId} not found`);
+        }
+
+        return this.completedTrainingRepository.find({
+            where: { trainer: { trainerId } },
+            relations: ['client', 'client.user', 'trainer', 'trainer.user'],
+            order: { trainingDate: 'DESC' },
+        });
+    }
+
     // Client Training Management
     async getTrainingsForClient(clientId: number): Promise<Training[]> {
         const client = await this.clientRepository.findOne({
@@ -807,7 +846,7 @@ export class SchedulingService {
     }
 
     // CompletedTraining CRUD
-    async createCompletedTraining(dto: CreateCompletedTrainingDto): Promise<CompletedTraining> {
+    async createCompletedTraining(dto: CreateCompletedTrainingDto): Promise<CompletedTraining[]> {
         const training = await this.trainingRepository.findOne({
             where: { trainingId: dto.trainingId },
             relations: ['room', 'room.gym', 'trainer', 'clients'],
@@ -817,41 +856,36 @@ export class SchedulingService {
             throw new NotFoundException(`Training with ID ${dto.trainingId} not found`);
         }
 
-        const client = await this.clientRepository.findOne({
-            where: { clientId: dto.clientId },
-        });
-
-        if (!client) {
-            throw new NotFoundException(`Client with ID ${dto.clientId} not found`);
+        if (!training.clients || training.clients.length === 0) {
+            throw new BadRequestException(`No clients are registered for this training`);
         }
 
-        const isClientInTraining = training.clients?.some(c => c.clientId === dto.clientId);
-        if (!isClientInTraining) {
-            throw new BadRequestException(`Client with ID ${dto.clientId} is not registered for this training`);
+        const completedTrainings: CompletedTraining[] = [];
+        for (const client of training.clients) {
+            const completedTraining = this.completedTrainingRepository.create({
+                price: training.price,
+                type: training.type,
+                trainingDate: new Date(dto.trainingDate),
+                gymName: training.room?.gym?.name || '',
+                client,
+                trainer: training.trainer,
+            });
+            completedTrainings.push(completedTraining);
         }
 
-        const completedTraining = this.completedTrainingRepository.create({
-            price: training.price,
-            type: training.type,
-            trainingDate: new Date(dto.trainingDate),
-            gymName: training.room?.gym?.name || '',
-            client,
-            trainer: training.trainer,
-        });
-
-        return this.completedTrainingRepository.save(completedTraining);
+        return this.completedTrainingRepository.save(completedTrainings);
     }
 
     async getAllCompletedTrainings(): Promise<CompletedTraining[]> {
         return this.completedTrainingRepository.find({
-            relations: ['client', 'trainer'],
+            relations: ['client', 'client.user', 'trainer', 'trainer.user'],
         });
     }
 
     async getCompletedTrainingById(id: number): Promise<CompletedTraining> {
         const completedTraining = await this.completedTrainingRepository.findOne({
             where: { completedTrainingId: id },
-            relations: ['client', 'trainer'],
+            relations: ['client', 'client.user', 'trainer', 'trainer.user'],
         });
 
         if (!completedTraining) {
@@ -872,7 +906,7 @@ export class SchedulingService {
 
         return this.completedTrainingRepository.find({
             where: { client: { clientId } },
-            relations: ['client', 'trainer'],
+            relations: ['client', 'client.user', 'trainer', 'trainer.user'],
             order: { trainingDate: 'DESC' },
         });
     }

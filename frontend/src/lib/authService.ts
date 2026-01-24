@@ -41,6 +41,12 @@ export interface UserInfo {
   role: string;
   firstName?: string;
   lastName?: string;
+  client?: {
+    clientId?: number;
+  };
+  trainer?: {
+    trainerId?: number;
+  };
 }
 
 export interface GymLocation {
@@ -234,6 +240,8 @@ export async function fetchAndUpdateUserInfo(): Promise<UserInfo | null> {
       role: data.role,
       firstName: data.firstName,
       lastName: data.lastName,
+      client: data.client ? { clientId: data.client.clientId } : undefined,
+      trainer: data.trainer ? { trainerId: data.trainer.trainerId } : undefined,
     };
     setUserInfo(updatedUserInfo);
     return updatedUserInfo;

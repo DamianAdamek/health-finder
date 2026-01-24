@@ -1,4 +1,4 @@
-import { LogOut, Settings, Shield, Building } from 'lucide-react';
+import { LogOut, Settings, Shield, Building, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   Sidebar,
@@ -26,7 +26,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ModeToggle } from '../ui/mode-toggle';
 
-const sidebarItems = [{ title: 'Home', path: '/dashboard', icon: Home }];
+const sidebarItems = [
+  { title: 'Home', path: '/dashboard', icon: Home },
+  { title: 'Trainers', path: '/trainers', icon: Users },
+];
 const adminItems = [
   { title: 'User Management', path: '/admin/users', icon: Shield },
   { title: 'Gym Management', path: '/admin/gyms', icon: Building },

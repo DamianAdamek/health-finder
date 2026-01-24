@@ -12,13 +12,22 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Calendar, Building, Dumbbell, Clock, User } from 'lucide-react';
+import {
+  Calendar,
+  Building,
+  Dumbbell,
+  Clock,
+  User,
+  CheckCircle,
+} from 'lucide-react';
 import { fetchProfile } from '@/lib/profileService';
 import { fetchTrainerProfile } from '@/lib/profileService';
 import type { UserProfile } from '@/lib/authService';
 import { AvailabilitySchedule } from '@/components/sections/AvailabilitySchedule';
 import { TrainerGyms } from '@/components/sections/TrainerGyms';
 import { ClientTrainings } from '@/components/sections/ClientTrainings';
+import { TrainerTrainings } from '@/components/sections/TrainerTrainings';
+import { ClientCompletedTrainings } from '@/components/sections/ClientCompletedTrainings';
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -71,12 +80,14 @@ function DashboardPage() {
   };
 
   const trainerSidebarItems = [
+    { title: 'My Trainings', path: '/dashboard#trainings', icon: Dumbbell },
     { title: 'My Gyms', path: '/dashboard#gyms', icon: Building },
     { title: 'Schedule', path: '/dashboard#schedule', icon: Calendar },
   ];
 
   const clientSidebarItems = [
     { title: 'Trainings', path: '/dashboard#trainings', icon: Dumbbell },
+    { title: 'Completed', path: '/dashboard#completed', icon: CheckCircle },
     { title: 'Availability', path: '/dashboard#availability', icon: Clock },
   ];
 
@@ -145,6 +156,11 @@ function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Trainer Trainings Section */}
+        <div id="trainings">
+          <TrainerTrainings onTrainingChange={loadProfile} />
+        </div>
+
         {/* Trainer Gyms Section */}
         <div id="gyms">
           <TrainerGyms
@@ -202,6 +218,11 @@ function DashboardPage() {
         {/* Client Trainings Section */}
         <div id="trainings">
           <ClientTrainings onTrainingChange={loadProfile} />
+        </div>
+
+        {/* Client Completed Trainings Section */}
+        <div id="completed">
+          <ClientCompletedTrainings onTrainingChange={loadProfile} />
         </div>
 
         {/* Client Availability Schedule */}

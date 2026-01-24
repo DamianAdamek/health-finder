@@ -102,7 +102,12 @@ export class EngagementService {
       trainerId,
     });
 
-    return this.opinionRepository.save(opinion);
+    const savedOpinion = await this.opinionRepository.save(opinion);
+    
+    // Update trainer's average rating
+    await this.updateTrainerRating(trainerId);
+    
+    return savedOpinion;
   }
 
   async findAllOpinions(): Promise<Opinion[]> {
@@ -121,13 +126,38 @@ export class EngagementService {
 
   async updateOpinion(id: number, updateOpinionDto: UpdateOpinionDto): Promise<Opinion> {
     const opinion = await this.findOpinion(id);
+    const trainerId = opinion.trainerId;
     Object.assign(opinion, updateOpinionDto);
 
-    return this.opinionRepository.save(opinion);
+    const updatedOpinion = await this.opinionRepository.save(opinion);
+    
+    // Update trainer's average rating
+    await this.updateTrainerRating(trainerId);
+    
+    return updatedOpinion;
   }
 
   async removeOpinion(id: number): Promise<void> {
     const opinion = await this.findOpinion(id);
+    const trainerId = opinion.trainerId;
     await this.opinionRepository.remove(opinion);
+    
+    // Update trainer's average rating
+    await this.updateTrainerRating(trainerId);
+  }
+
+  // Helper method to update trainer's average rating
+  private async updateTrainerRating(trainerId: number): Promise<void> {
+    const opinions = await this.opinionRepository.find({
+      where: { trainerId },
+    });
+
+    let averageRating = 0;
+    if (opinions.length > 0) {
+      const totalRating = opinions.reduce((sum, opinion) => sum + opinion.rating, 0);
+      averageRating = totalRating / opinions.length;
+    }
+
+    await this.userService.updateTrainer(trainerId, { rating: averageRating });
   }
 }

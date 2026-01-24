@@ -165,6 +165,17 @@ export class SchedulingController {
         return this.schedulingService.getAllTrainings();
     }
 
+    // Trainer Training Management endpoints - MUST be before :id routes
+    @Get('trainings/trainer')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.TRAINER)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get all trainings for logged-in trainer' })
+    @ApiResponse({ status: 200, description: 'List of trainer trainings', type: [Training] })
+    async getMyTrainerTrainings(@CurrentUser() user: User): Promise<Training[]> {
+        return this.schedulingService.getTrainingsForTrainer(user.trainer.trainerId);
+    }
+
     // Client Training Management endpoints - MUST be before :id routes
     @Get('trainings/my')
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -288,10 +299,10 @@ export class SchedulingController {
     @Roles(UserRole.TRAINER, UserRole.GYM_ADMIN, UserRole.ADMIN)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Archive a training as completed' })
-    @ApiResponse({ status: 201, description: 'Completed training created', type: CompletedTraining })
+    @ApiResponse({ status: 201, description: 'Completed trainings created', type: [CompletedTraining] })
     async createCompletedTraining(
         @Body() dto: CreateCompletedTrainingDto,
-    ): Promise<CompletedTraining> {
+    ): Promise<CompletedTraining[]> {
         return this.schedulingService.createCompletedTraining(dto);
     }
 
@@ -313,6 +324,16 @@ export class SchedulingController {
     @ApiResponse({ status: 200, description: 'List of completed trainings', type: [CompletedTraining] })
     async getMyCompletedTrainings(@CurrentUser() user: User): Promise<CompletedTraining[]> {
         return this.schedulingService.getCompletedTrainingsForClient(user.client.clientId);
+    }
+
+    @Get('completed-trainings/trainer')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.TRAINER)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get completed trainings for logged-in trainer' })
+    @ApiResponse({ status: 200, description: 'List of completed trainings', type: [CompletedTraining] })
+    async getMyTrainerCompletedTrainings(@CurrentUser() user: User): Promise<CompletedTraining[]> {
+        return this.schedulingService.getCompletedTrainingsForTrainer(user.trainer.trainerId);
     }
 
     @Get('completed-trainings/:id')

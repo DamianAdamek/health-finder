@@ -103,6 +103,24 @@ export const TrainingType = {
 
 export type TrainingType = (typeof TrainingType)[keyof typeof TrainingType];
 
+// ===================== Completed Training Types =====================
+
+export interface CompletedTraining {
+  completedTrainingId: number;
+  price: number;
+  type: TrainingType;
+  trainingDate: string;
+  gymName: string;
+  client: ClientInfo;
+  trainer: TrainerInfo;
+  archivedAt: string;
+}
+
+export interface CreateCompletedTrainingDto {
+  trainingId: number;
+  trainingDate: string;
+}
+
 // ===================== DTOs =====================
 
 export interface CreateScheduleDto {
@@ -259,6 +277,30 @@ export async function cancelTrainingReservation(trainingId: number): Promise<Tra
   return response.data;
 }
 
+// ===================== Trainer Training Management API =====================
+
+export async function getTrainerTrainings(): Promise<Training[]> {
+  const response = await api.get('/scheduling/trainings/trainer');
+  return response.data;
+}
+
+// ===================== Completed Trainings API =====================
+
+export async function createCompletedTraining(data: CreateCompletedTrainingDto): Promise<CompletedTraining[]> {
+  const response = await api.post('/scheduling/completed-trainings', data);
+  return response.data;
+}
+
+export async function getMyCompletedTrainings(): Promise<CompletedTraining[]> {
+  const response = await api.get('/scheduling/completed-trainings/my');
+  return response.data;
+}
+
+export async function getTrainerCompletedTrainings(): Promise<CompletedTraining[]> {
+  const response = await api.get('/scheduling/completed-trainings/trainer');
+  return response.data;
+}
+
 // ===================== Service Export =====================
 
 const schedulingService = {
@@ -287,6 +329,12 @@ const schedulingService = {
   getMyTrainings,
   signUpForTraining,
   cancelTrainingReservation,
+  // Trainer Training Management
+  getTrainerTrainings,
+  // Completed Trainings
+  createCompletedTraining,
+  getMyCompletedTrainings,
+  getTrainerCompletedTrainings,
 };
 
 export default schedulingService;
