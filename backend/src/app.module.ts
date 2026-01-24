@@ -14,7 +14,7 @@ import { EngagementModule } from './modules/engagement/engagement.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '../../../.env',
+      envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '../.env',
     }),
     
     TypeOrmModule.forRootAsync({
@@ -28,7 +28,8 @@ import { EngagementModule } from './modules/engagement/engagement.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
-        synchronize: true, // set to false in production
+        synchronize: process.env.NODE_ENV === 'test' || configService.get('NODE_ENV') !== 'production',
+        dropSchema: process.env.NODE_ENV === 'test',
       }),
     }),
 
