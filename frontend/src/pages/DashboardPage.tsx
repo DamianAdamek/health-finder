@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
@@ -17,6 +18,7 @@ import { fetchTrainerProfile } from '@/lib/profileService';
 import type { UserProfile } from '@/lib/authService';
 import { AvailabilitySchedule } from '@/components/sections/AvailabilitySchedule';
 import { TrainerGyms } from '@/components/sections/TrainerGyms';
+import { ClientTrainings } from '@/components/sections/ClientTrainings';
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -25,10 +27,23 @@ function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const role = user?.role?.toLowerCase();
+  const location = useLocation();
 
   useEffect(() => {
     loadProfile();
   }, [role]);
+
+  // Scroll to anchor when hash in URL changes
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      // Delay to ensure element is rendered
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  }, [location.hash]);
 
   const loadProfile = async () => {
     try {
@@ -61,6 +76,7 @@ function DashboardPage() {
   ];
 
   const clientSidebarItems = [
+    { title: 'Trainings', path: '/dashboard#trainings', icon: Dumbbell },
     { title: 'Availability', path: '/dashboard#availability', icon: Clock },
   ];
 
@@ -134,6 +150,7 @@ function DashboardPage() {
           <TrainerGyms
             gyms={trainerProfile?.gyms}
             trainerId={trainerProfile?.trainerId}
+            scheduleId={trainerProfile?.schedule?.scheduleId}
             onTrainingCreated={loadProfile}
           />
         </div>
@@ -172,16 +189,20 @@ function DashboardPage() {
               Welcome, {profile?.firstName || user?.email?.split('@')[0]}!
             </CardTitle>
             <CardDescription>
-              Client panel - manage your training availability
+              Client panel - find and manage your trainings
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              Add time windows when you are available for trainings. Trainers
-              will be able to see your availability and propose schedules.
+              Search for trainings near you, sign up, and manage your schedule.
             </p>
           </CardContent>
         </Card>
+
+        {/* Client Trainings Section */}
+        <div id="trainings">
+          <ClientTrainings onTrainingChange={loadProfile} />
+        </div>
 
         {/* Client Availability Schedule */}
         <div id="availability">
@@ -244,7 +265,7 @@ function DashboardPage() {
                   {role === 'trainer'
                     ? 'Manage your trainings and schedule'
                     : role === 'client'
-                      ? 'Manage your availability'
+                      ? 'Find and manage your trainings'
                       : 'Welcome to HealthFinder app'}
                 </p>
               </div>

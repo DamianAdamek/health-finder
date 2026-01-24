@@ -164,7 +164,7 @@ export class UserManagementService {
   async findOneUser(id: number) {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ['trainer', 'trainer.schedule', 'client', 'client.schedule', 'client.location'],
+      relations: ['trainer', 'trainer.schedule', 'client', 'client.schedule', 'client.location', 'client.form'],
     });
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);
     return user;
@@ -240,14 +240,14 @@ export class UserManagementService {
 
   findAllClients() {
     return this.clientRepository.find({
-      relations: ['user', 'location', 'schedule'],
+      relations: ['user', 'location', 'schedule', 'form'],
     });
   }
 
   async findOneClient(id: number) {
     const client = await this.clientRepository.findOne({
       where: { clientId: id },
-      relations: ['user', 'location', 'schedule'],
+      relations: ['user', 'location', 'schedule', 'form'],
     });
     if (!client) throw new NotFoundException(`Client with ID ${id} not found`);
     return client;

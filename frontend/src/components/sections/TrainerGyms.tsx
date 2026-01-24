@@ -32,8 +32,6 @@ import {
   DoorOpen,
   Users,
   Plus,
-  Calendar,
-  Clock,
   Dumbbell,
   Edit,
   Trash2,
@@ -50,6 +48,7 @@ import enumsService from '@/lib/enumsService';
 interface TrainerGymsProps {
   gyms: TrainerGym[] | undefined;
   trainerId: number | undefined;
+  scheduleId?: number;
   onTrainingCreated?: () => void;
 }
 
@@ -98,6 +97,7 @@ interface TrainingFormState {
 export function TrainerGyms({
   gyms,
   trainerId,
+  scheduleId,
   onTrainingCreated,
 }: TrainerGymsProps) {
   const [isAddTrainingOpen, setIsAddTrainingOpen] = useState(false);
@@ -125,6 +125,7 @@ export function TrainerGyms({
   const [trainingTypeLabels, setTrainingTypeLabels] = useState<
     Record<string, string>
   >(FALLBACK_TRAINING_TYPE_LABELS);
+  const [availableWindows, setAvailableWindows] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -179,6 +180,129 @@ export function TrainerGyms({
       loadTrainings();
     }
   }, [trainerId]);
+
+  // Load available windows for trainer's schedule
+  useEffect(() => {
+    const loadAvailableWindows = async () => {
+      if (!scheduleId) return;
+      try {
+        const windows =
+          await schedulingService.getWindowsByScheduleId(scheduleId);
+        // Filter to only available windows (without training assigned)
+        const available = windows.filter((w) => !w.training);
+        setAvailableWindows(available);
+      } catch (error) {
+        console.error('Failed to load available windows:', error);
+      }
+    };
+    loadAvailableWindows();
+  }, [scheduleId]);
+
+  // Helper: Convert time string to minutes since midnight
+  const timeToMinutes = (time: string): number => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  // Helper: Compare two time strings (HH:mm format)
+  // Returns -1 if t1 < t2, 0 if t1 === t2, 1 if t1 > t2
+  const compareTime = (t1: string, t2: string): number => {
+    const min1 = timeToMinutes(t1);
+    const min2 = timeToMinutes(t2);
+    if (min1 < min2) return -1;
+    if (min1 > min2) return 1;
+    return 0;
+  };
+
+  // Helper: Get position and width percentage for timeline
+  const getTimelinePosition = (
+    startTime: string,
+    endTime: string,
+    dayStart: string,
+    dayEnd: string
+  ) => {
+    const dayStartMin = timeToMinutes(dayStart);
+    const dayEndMin = timeToMinutes(dayEnd);
+    const totalMinutes = dayEndMin - dayStartMin;
+
+    const trainStartMin = timeToMinutes(startTime);
+    const trainEndMin = timeToMinutes(endTime);
+
+    const left = ((trainStartMin - dayStartMin) / totalMinutes) * 100;
+    const width = ((trainEndMin - trainStartMin) / totalMinutes) * 100;
+
+    return { left, width };
+  };
+
+  // Helper: Find all availability windows for a day
+  const getAvailabilitiesForDay = (day: DayOfWeek) => {
+    return availableWindows.filter((w) => w.dayOfWeek === day && !w.training);
+  };
+
+  // Helper: Check if there's availability for given day and time
+  // The requested time must be within an available window and not overlap with booked trainings
+  const hasAvailability = (
+    dayOfWeek: DayOfWeek,
+    startTime: string,
+    endTime: string
+  ): boolean => {
+    // Find if requested time is within any available window
+    const availableWindow = availableWindows.find(
+      (w) =>
+        w.dayOfWeek === dayOfWeek &&
+        compareTime(w.startTime, startTime) <= 0 &&
+        compareTime(endTime, w.endTime) <= 0
+    );
+
+    if (!availableWindow) return false;
+
+    // Check if requested time overlaps with any booked training
+    const bookedTrainings = trainings.filter(
+      (t) => t.window?.dayOfWeek === dayOfWeek && t.window
+    );
+
+    const hasConflict = bookedTrainings.some((training) => {
+      const trainStart = training.window?.startTime || '00:00';
+      const trainEnd = training.window?.endTime || '00:00';
+
+      // Check for overlap: NOT (endTime <= trainStart OR startTime >= trainEnd)
+      return !(
+        compareTime(endTime, trainStart) <= 0 ||
+        compareTime(startTime, trainEnd) >= 0
+      );
+    });
+
+    return !hasConflict;
+  };
+
+  // Helper: Find matching window for day and time (exact match for assignment)
+  const findMatchingWindow = (
+    dayOfWeek: DayOfWeek,
+    startTime: string,
+    endTime: string
+  ) => {
+    return availableWindows.find(
+      (w) =>
+        w.dayOfWeek === dayOfWeek &&
+        w.startTime === startTime &&
+        w.endTime === endTime
+    );
+  };
+
+  // Helper: Sort trainings by day and time
+  const sortTrainings = (trainings: Training[]): Training[] => {
+    return [...trainings].sort((a, b) => {
+      const dayDiff =
+        DAYS_ORDER.indexOf(a.window?.dayOfWeek || DayOfWeek.MONDAY) -
+        DAYS_ORDER.indexOf(b.window?.dayOfWeek || DayOfWeek.MONDAY);
+      if (dayDiff !== 0) return dayDiff;
+
+      // Same day - sort by start time
+      const aTime = a.window?.startTime || '00:00';
+      const bTime = b.window?.startTime || '00:00';
+      return aTime.localeCompare(bTime);
+    });
+  };
 
   const loadTrainings = async () => {
     try {
@@ -246,6 +370,17 @@ export function TrainerGyms({
       return;
     }
 
+    // Check if there's availability for this time slot
+    if (
+      !isEditMode &&
+      !hasAvailability(form.dayOfWeek, form.startTime, form.endTime)
+    ) {
+      toast.error(
+        'You are not available for this time slot. Please add it to your availability first.'
+      );
+      return;
+    }
+
     const price = Number(form.price);
     if (isNaN(price) || price <= 0) {
       toast.error('Please enter a valid price');
@@ -287,13 +422,27 @@ export function TrainerGyms({
           clientIds: [], // No clients initially
         });
 
-        // Then create a window for this training
-        await schedulingService.createWindow({
-          trainingId: training.trainingId,
-          dayOfWeek: form.dayOfWeek,
-          startTime: form.startTime,
-          endTime: form.endTime,
-        });
+        // Find or create a window for this training
+        const existingWindow = findMatchingWindow(
+          form.dayOfWeek,
+          form.startTime,
+          form.endTime
+        );
+
+        if (existingWindow) {
+          // Assign existing window to training
+          await schedulingService.updateWindow(existingWindow.windowId, {
+            trainingId: training.trainingId,
+          });
+        } else {
+          // Create new window
+          await schedulingService.createWindow({
+            trainingId: training.trainingId,
+            dayOfWeek: form.dayOfWeek,
+            startTime: form.startTime,
+            endTime: form.endTime,
+          });
+        }
 
         toast.success('Training created successfully');
       }
@@ -335,13 +484,14 @@ export function TrainerGyms({
 
   const hasGyms = gyms && gyms.length > 0;
 
-  // Group trainings by gym
+  // Group trainings by gym and sort them
   const trainingsByGym =
     gyms?.reduce(
       (acc, gym) => {
-        acc[gym.gymId] = trainings.filter((t) =>
+        const gymTrainings = trainings.filter((t) =>
           gym.rooms?.some((r) => r.roomId === t.room?.roomId)
         );
+        acc[gym.gymId] = sortTrainings(gymTrainings);
         return acc;
       },
       {} as Record<number, Training[]>
@@ -424,77 +574,161 @@ export function TrainerGyms({
                     </div>
                   )}
 
-                  {/* Trainings in this gym */}
+                  {/* Trainings Timeline View */}
                   {trainingsByGym[gym.gymId]?.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                         <Dumbbell className="h-4 w-4" />
-                        Your trainings
+                        Your trainings (by day)
                       </h4>
-                      <div className="space-y-2">
-                        {trainingsByGym[gym.gymId].map((training) => (
-                          <div
-                            key={training.trainingId}
-                            className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Badge variant="outline">
-                                {trainingTypeLabels[String(training.type)] ||
-                                  String(training.type)}
-                              </Badge>
-                              <span className="text-sm">
-                                {training.room?.name}
-                              </span>
-                              {training.window && (
-                                <span className="text-sm text-muted-foreground flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {dayLabels[training.window.dayOfWeek] ||
-                                    FALLBACK_DAY_LABELS[
-                                      training.window.dayOfWeek
-                                    ]}
-                                  <Clock className="h-3 w-3 ml-2" />
-                                  {training.window.startTime} -{' '}
-                                  {training.window.endTime}
+                      <div className="space-y-6">
+                        {DAYS_ORDER.map((day) => {
+                          const dayTrainings = trainingsByGym[gym.gymId].filter(
+                            (t) => t.window?.dayOfWeek === day
+                          );
+                          const availabilities = getAvailabilitiesForDay(day);
+
+                          if (
+                            dayTrainings.length === 0 &&
+                            availabilities.length === 0
+                          )
+                            return null;
+
+                          return (
+                            <div key={day} className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium w-20">
+                                  {dayLabels[day] || FALLBACK_DAY_LABELS[day]}
                                 </span>
+                              </div>
+
+                              {availabilities.map((availability) => (
+                                <div
+                                  key={availability.windowId}
+                                  className="space-y-2"
+                                >
+                                  <span className="text-xs text-muted-foreground bg-green-50 dark:bg-green-950 px-2 py-1 rounded border border-green-200 dark:border-green-800 inline-block ml-20">
+                                    Available: {availability.startTime} -{' '}
+                                    {availability.endTime}
+                                  </span>
+                                  <div className="relative h-12 bg-muted/30 rounded-md border border-muted overflow-hidden ml-20">
+                                    {/* Time labels */}
+                                    <div className="absolute inset-0 flex text-xs text-muted-foreground pointer-events-none">
+                                      <div className="flex-1 flex items-center justify-start pl-1 border-r border-muted">
+                                        {availability.startTime}
+                                      </div>
+                                      <div className="flex-1 flex items-center justify-end pr-1">
+                                        {availability.endTime}
+                                      </div>
+                                    </div>
+
+                                    {/* Trainings */}
+                                    {dayTrainings.map((training) => {
+                                      const { left, width } =
+                                        getTimelinePosition(
+                                          training.window?.startTime || '09:00',
+                                          training.window?.endTime || '10:00',
+                                          availability.startTime,
+                                          availability.endTime
+                                        );
+
+                                      return (
+                                        <div
+                                          key={training.trainingId}
+                                          className="absolute top-1 bottom-1 bg-primary/80 rounded px-2 py-1 overflow-hidden cursor-pointer hover:bg-primary transition-colors group"
+                                          style={{
+                                            left: `${left}%`,
+                                            width: `${width}%`,
+                                          }}
+                                          title={`${trainingTypeLabels[String(training.type)] || String(training.type)} - ${training.window?.startTime}-${training.window?.endTime}`}
+                                        >
+                                          <div className="text-xs text-primary-foreground font-medium truncate">
+                                            {training.window?.startTime}-
+                                            {training.window?.endTime}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Detailed list */}
+                              {dayTrainings.length > 0 && (
+                                <div className="space-y-1 ml-20">
+                                  {dayTrainings.map((training) => (
+                                    <div
+                                      key={training.trainingId}
+                                      className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2 text-sm"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          {trainingTypeLabels[
+                                            String(training.type)
+                                          ] || String(training.type)}
+                                        </Badge>
+                                        <span className="text-muted-foreground">
+                                          {training.room?.name}
+                                        </span>
+                                        <span className="font-mono">
+                                          {training.window?.startTime} -{' '}
+                                          {training.window?.endTime}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Badge
+                                          variant={
+                                            training.status ===
+                                            TrainingStatus.PLANNED
+                                              ? 'default'
+                                              : training.status ===
+                                                  TrainingStatus.COMPLETED
+                                                ? 'secondary'
+                                                : 'destructive'
+                                          }
+                                          className="text-xs"
+                                        >
+                                          {training.status}
+                                        </Badge>
+                                        <span className="font-medium">
+                                          {training.price} zł
+                                        </span>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={() =>
+                                            openEditTrainingDialog(
+                                              training,
+                                              gym
+                                            )
+                                          }
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={() =>
+                                            handleDeleteTraining(
+                                              training.trainingId
+                                            )
+                                          }
+                                        >
+                                          <Trash2 className="h-3 w-3 text-destructive" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={
-                                  training.status === TrainingStatus.PLANNED
-                                    ? 'default'
-                                    : training.status ===
-                                        TrainingStatus.COMPLETED
-                                      ? 'secondary'
-                                      : 'destructive'
-                                }
-                              >
-                                {training.status}
-                              </Badge>
-                              <span className="text-sm font-medium">
-                                {training.price} zł
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  openEditTrainingDialog(training, gym)
-                                }
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  handleDeleteTraining(training.trainingId)
-                                }
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -242,6 +242,23 @@ export async function getMyRecommendations(): Promise<RecommendedTraining[]> {
   return response.data;
 }
 
+// ===================== Client Training Management API =====================
+
+export async function getMyTrainings(): Promise<Training[]> {
+  const response = await api.get('/scheduling/trainings/my');
+  return response.data;
+}
+
+export async function signUpForTraining(trainingId: number): Promise<Training> {
+  const response = await api.post(`/scheduling/trainings/${trainingId}/sign-up`);
+  return response.data;
+}
+
+export async function cancelTrainingReservation(trainingId: number): Promise<Training> {
+  const response = await api.post(`/scheduling/trainings/${trainingId}/cancel`);
+  return response.data;
+}
+
 // ===================== Service Export =====================
 
 const schedulingService = {
@@ -266,6 +283,10 @@ const schedulingService = {
   deleteTraining,
   // Recommendations
   getMyRecommendations,
+  // Client Training Management
+  getMyTrainings,
+  signUpForTraining,
+  cancelTrainingReservation,
 };
 
 export default schedulingService;

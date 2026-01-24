@@ -48,6 +48,15 @@ export class RecommendationService {
   }
 
   /**
+   * Invalidate cache for a specific client without recomputing
+   * Useful after training sign-up/cancellation to ensure fresh data on next request
+   */
+  invalidateCacheForClient(clientId: number): void {
+    this.recommendationCache.delete(clientId);
+    this.cacheTimestamps.delete(clientId);
+  }
+
+  /**
    * Internal method that computes or retrieves cached recommendations
    */
   private async computeRecommendations(clientId: number): Promise<RecommendedTraining[]> {
@@ -84,7 +93,7 @@ export class RecommendationService {
 
     // 4. Get all trainings with relations
     const allTrainings = await this.trainingRepository.find({
-      relations: ['room', 'room.gym', 'room.gym.location', 'trainer'],
+      relations: ['room', 'room.gym', 'room.gym.location', 'trainer', 'trainer.user', 'window', 'clients'],
     });
 
     // 5. Filter trainings by type if form exists
