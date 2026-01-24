@@ -6,6 +6,7 @@ import { Opinion } from './entities/opinion.entity';
 import { UserManagementService } from '../user-management/user-management.service';
 import { SchedulingService } from '../scheduling/scheduling.service';
 import { RecommendationService } from '../scheduling/recommendation.service';
+import { ActivityLevel, TrainingType } from '../../common/enums';
 
 describe('EngagementService', () => {
   let service: EngagementService;
@@ -53,6 +54,7 @@ describe('EngagementService', () => {
     mockRecommendationService = {
       recommendLocations: jest.fn(),
       recommendTrainings: jest.fn(),
+      recomputeRecommendationsForClient: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -85,6 +87,80 @@ describe('EngagementService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('updateForm', () => {
+    it('should update form and recompute recommendations', async () => {
+      const existingForm = {
+        formId: 1,
+        clientId: 5,
+        activityLevel: ActivityLevel.MEDIUM,
+        trainingTypes: [TrainingType.CARDIO],
+        trainingGoal: 'Lose weight',
+        healthProfile: 'None',
+      };
+
+      const updateDto = {
+        activityLevel: ActivityLevel.HIGH,
+        trainingTypes: [TrainingType.BODYBUILDING, TrainingType.CARDIO],
+        trainingGoal: 'Gain muscle',
+        healthProfile: 'Knees ok',
+      };
+
+      const savedForm = { ...existingForm, ...updateDto };
+
+      mockFormRepository.findOne.mockResolvedValue(existingForm);
+      mockFormRepository.save.mockResolvedValue(savedForm);
+      mockRecommendationService.recomputeRecommendationsForClient.mockResolvedValue(undefined);
+
+      const result = await service.updateForm(1, updateDto);
+
+      expect(mockFormRepository.findOne).toHaveBeenCalledWith({ where: { formId: 1 } });
+      expect(mockFormRepository.save).toHaveBeenCalledWith(savedForm);
+      expect(mockRecommendationService.recomputeRecommendationsForClient).toHaveBeenCalledWith(5);
+      expect(result.activityLevel).toBe(ActivityLevel.HIGH);
+      expect(result.trainingTypes).toEqual([TrainingType.BODYBUILDING, TrainingType.CARDIO]);
+      expect(result.trainingGoal).toBe('Gain muscle');
+      expect(result.healthProfile).toBe('Knees ok');
+    });
+
+    it('should throw NotFoundException when form does not exist', async () => {
+      mockFormRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.updateForm(999, { trainingGoal: 'anything' }))
+        .rejects
+        .toThrow('Form with ID 999 not found');
+
+      expect(mockFormRepository.save).not.toHaveBeenCalled();
+      expect(mockRecommendationService.recomputeRecommendationsForClient).not.toHaveBeenCalled();
+    });
+
+    it('should still return saved form when recommendation recompute fails', async () => {
+      const existingForm = {
+        formId: 1,
+        clientId: 5,
+        activityLevel: ActivityLevel.MEDIUM,
+        trainingTypes: [TrainingType.CARDIO],
+        trainingGoal: 'Lose weight',
+      };
+
+      const updateDto = { trainingGoal: 'Gain muscle' };
+      const savedForm = { ...existingForm, ...updateDto };
+
+      mockFormRepository.findOne.mockResolvedValue(existingForm);
+      mockFormRepository.save.mockResolvedValue(savedForm);
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockRecommendationService.recomputeRecommendationsForClient.mockRejectedValue(new Error('Recompute failed'));
+
+      const result = await service.updateForm(1, updateDto);
+
+      expect(mockFormRepository.save).toHaveBeenCalledWith(savedForm);
+      expect(mockRecommendationService.recomputeRecommendationsForClient).toHaveBeenCalledWith(5);
+      expect(result).toEqual(savedForm);
+      expect(consoleSpy).toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('createOpinion', () => {

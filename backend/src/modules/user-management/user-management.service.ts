@@ -274,16 +274,18 @@ export class UserManagementService {
       apartmentNumber,
     };
 
-    const hasAnyLocationField = Object.values(locationData).some(
-      (value) => value !== undefined,
+    const definedLocationData = Object.fromEntries(
+      Object.entries(locationData).filter(([, value]) => value !== undefined),
     );
+
+    const hasAnyLocationField = Object.keys(definedLocationData).length > 0;
 
     if (hasAnyLocationField) {
       if (client.location) {
-        Object.assign(client.location, locationData);
+        Object.assign(client.location, definedLocationData);
         await this.locationRepository.save(client.location);
       } else {
-        const newLocation = this.locationRepository.create(locationData);
+        const newLocation = this.locationRepository.create(definedLocationData);
         client.location = await this.locationRepository.save(newLocation);
         await this.clientRepository.save(client);
       }
