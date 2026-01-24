@@ -24,6 +24,7 @@ describe('UserManagementService', () => {
   let scheduleRepository: any;
   let locationRepository: any;
   let formRepository: any;
+  let consoleErrorSpy: jest.SpyInstance;
 
   const createMockRepository = () => ({
     find: jest.fn(),
@@ -48,6 +49,8 @@ describe('UserManagementService', () => {
   };
 
   beforeEach(async () => {
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
     userRepository = createMockRepository();
     trainerRepository = createMockRepository();
     clientRepository = createMockRepository();
@@ -107,6 +110,7 @@ describe('UserManagementService', () => {
   });
 
   afterEach(() => {
+    consoleErrorSpy.mockRestore();
     jest.clearAllMocks();
   });
 

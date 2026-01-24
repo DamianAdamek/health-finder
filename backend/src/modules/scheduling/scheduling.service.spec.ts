@@ -10,6 +10,8 @@ import { Gym } from '../facilities/entities/gym.entity';
 import { Trainer } from '../user-management/entities/trainer.entity';
 import { Client } from '../user-management/entities/client.entity';
 import { TrainingStatus } from '../../common/enums/training-status.enum';
+import { CompletedTraining } from './entities/completed-training.entity';
+import { RecommendationService } from './recommendation.service';
 
 describe('SchedulingService', () => {
   let service: SchedulingService;
@@ -55,6 +57,10 @@ describe('SchedulingService', () => {
           useValue: mockRepository,
         },
         {
+          provide: getRepositoryToken(CompletedTraining),
+          useValue: mockRepository,
+        },
+        {
           provide: getRepositoryToken(Room),
           useValue: mockRepository,
         },
@@ -73,6 +79,10 @@ describe('SchedulingService', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: RecommendationService,
+          useValue: { invalidateCacheForClient: jest.fn() },
         },
       ],
     }).compile();

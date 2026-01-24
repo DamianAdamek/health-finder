@@ -3,6 +3,7 @@ import { EngagementService } from './engagement.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Form } from './entities/form.entity';
 import { Opinion } from './entities/opinion.entity';
+import { CompletedTraining } from '../scheduling/entities/completed-training.entity';
 import { UserManagementService } from '../user-management/user-management.service';
 import { SchedulingService } from '../scheduling/scheduling.service';
 import { RecommendationService } from '../scheduling/recommendation.service';
@@ -12,6 +13,7 @@ describe('EngagementService', () => {
   let service: EngagementService;
   let mockFormRepository: any;
   let mockOpinionRepository: any;
+  let mockCompletedTrainingRepository: any;
   let mockUserManagementService: any;
   let mockSchedulingService: any;
   let mockRecommendationService: any;
@@ -40,10 +42,22 @@ describe('EngagementService', () => {
       remove: jest.fn(),
     };
 
+    mockCompletedTrainingRepository = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+      findOneBy: jest.fn(),
+      save: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+      update: jest.fn(),
+      remove: jest.fn(),
+    };
+
     mockUserManagementService = {
       clientExists: jest.fn(),
       updateClient: jest.fn(),
       trainerExists: jest.fn(),
+      updateTrainer: jest.fn(),
     };
 
     mockSchedulingService = {
@@ -66,6 +80,10 @@ describe('EngagementService', () => {
         {
           provide: getRepositoryToken(Opinion),
           useValue: mockOpinionRepository,
+        },
+        {
+          provide: getRepositoryToken(CompletedTraining),
+          useValue: mockCompletedTrainingRepository,
         },
         {
           provide: UserManagementService,
@@ -178,19 +196,38 @@ describe('EngagementService', () => {
         createdAt: new Date(),
       };
 
+      const completedTraining = {
+        completedTrainingId: 1,
+        clientId: 1,
+        trainerId: 2,
+        price: 100,
+        type: TrainingType.CARDIO,
+        trainingDate: new Date(),
+      };
+
       mockUserManagementService.clientExists.mockResolvedValue(true);
       mockUserManagementService.trainerExists.mockResolvedValue(true);
-      mockSchedulingService.clientHasCompletedWithTrainer.mockResolvedValue(true);
+      mockUserManagementService.updateTrainer.mockResolvedValue({ trainerId: 2, rating: 5 });
+      mockOpinionRepository.findOne.mockResolvedValue(null); // For checking duplicate opinions
+      mockOpinionRepository.find.mockResolvedValue([savedOpinion]); // For updateTrainerRating
       mockOpinionRepository.create.mockReturnValue(createOpinionDto);
       mockOpinionRepository.save.mockResolvedValue(savedOpinion);
+      // Mock the completedTrainingRepository method
+      mockCompletedTrainingRepository.findOne.mockResolvedValue(completedTraining);
 
       const result = await service.createOpinion(createOpinionDto);
 
       expect(mockUserManagementService.clientExists).toHaveBeenCalledWith(1);
       expect(mockUserManagementService.trainerExists).toHaveBeenCalledWith(2);
-      expect(mockSchedulingService.clientHasCompletedWithTrainer).toHaveBeenCalledWith(1, 2);
-      expect(mockOpinionRepository.create).toHaveBeenCalledWith(createOpinionDto);
-      expect(mockOpinionRepository.save).toHaveBeenCalledWith(createOpinionDto);
+      expect(mockOpinionRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rating: 5,
+          comment: 'Excellent trainer!',
+          clientId: 1,
+          trainerId: 2,
+        })
+      );
+      expect(mockOpinionRepository.save).toHaveBeenCalled();
       expect(result).toEqual(savedOpinion);
     });
 
@@ -241,18 +278,29 @@ describe('EngagementService', () => {
 
       mockUserManagementService.clientExists.mockResolvedValue(true);
       mockUserManagementService.trainerExists.mockResolvedValue(true);
-      mockSchedulingService.clientHasCompletedWithTrainer.mockResolvedValue(false);
+      // No completed training found
+      mockCompletedTrainingRepository.findOne.mockResolvedValue(null);
 
       await expect(service.createOpinion(createOpinionDto))
         .rejects
         .toThrow('Client must have at least one completed training with this trainer to leave an opinion');
 
-      expect(mockSchedulingService.clientHasCompletedWithTrainer).toHaveBeenCalledWith(1, 2);
       expect(mockOpinionRepository.save).not.toHaveBeenCalled();
     });
 
     it('should accept valid rating range (1-5)', async () => {
       const ratings = [1, 2, 3, 4, 5];
+
+      const completedTraining = {
+        completedTrainingId: 1,
+        clientId: 1,
+        trainerId: 2,
+        price: 100,
+        type: TrainingType.CARDIO,
+        trainingDate: new Date(),
+      };
+
+      mockCompletedTrainingRepository.findOne.mockResolvedValue(completedTraining);
 
       for (const rating of ratings) {
         const createOpinionDto = {
@@ -264,8 +312,9 @@ describe('EngagementService', () => {
 
         mockUserManagementService.clientExists.mockResolvedValue(true);
         mockUserManagementService.trainerExists.mockResolvedValue(true);
-        mockSchedulingService.clientHasCompletedWithTrainer.mockResolvedValue(true);
+        mockUserManagementService.updateTrainer.mockResolvedValue({ trainerId: 2, rating });
         mockOpinionRepository.create.mockReturnValue(createOpinionDto);
+        mockOpinionRepository.find.mockResolvedValue([{ opinionId: 1, ...createOpinionDto }]); // For updateTrainerRating
         mockOpinionRepository.save.mockResolvedValue({ opinionId: 1, ...createOpinionDto });
 
         const result = await service.createOpinion(createOpinionDto);
@@ -296,7 +345,9 @@ describe('EngagementService', () => {
       };
 
       mockOpinionRepository.findOne.mockResolvedValue(existingOpinion);
+      mockOpinionRepository.find.mockResolvedValue([updatedOpinion]); // For updateTrainerRating
       mockOpinionRepository.save.mockResolvedValue(updatedOpinion);
+      mockUserManagementService.updateTrainer.mockResolvedValue({ trainerId: 2, rating: 5 });
 
       const result = await service.updateOpinion(1, updateDto);
 
@@ -325,7 +376,9 @@ describe('EngagementService', () => {
       };
 
       mockOpinionRepository.findOne.mockResolvedValue(opinion);
+      mockOpinionRepository.find.mockResolvedValue([]); // For updateTrainerRating - empty after removal
       mockOpinionRepository.remove.mockResolvedValue(opinion);
+      mockUserManagementService.updateTrainer.mockResolvedValue({ trainerId: 2, rating: 0 });
 
       await service.removeOpinion(1);
 
