@@ -8,8 +8,8 @@ import { UpdateFormDto } from './dto/update-form.dto';
 import { CreateOpinionDto } from './dto/create-opinion.dto';
 import { UpdateOpinionDto } from './dto/update-opinion.dto';
 import { UserManagementService } from 'src/modules/user-management/user-management.service';
-import { SchedulingService } from 'src/modules/scheduling/scheduling.service';
 import { RecommendationService } from 'src/modules/scheduling/recommendation.service';
+import { CompletedTraining } from 'src/modules/scheduling/entities/completed-training.entity';
 
 @Injectable()
 export class EngagementService {
@@ -19,8 +19,11 @@ export class EngagementService {
 
     @InjectRepository(Opinion)
     private opinionRepository: Repository<Opinion>,
+
+    @InjectRepository(CompletedTraining)
+    private completedTrainingRepository: Repository<CompletedTraining>,
+
     private userService: UserManagementService,
-    private schedulingService: SchedulingService,
     private recommendationService: RecommendationService,
   ) {}
 
@@ -34,11 +37,6 @@ export class EngagementService {
 
     // Update client's form reference
     await this.userService.updateClient(savedForm.clientId, { formId: savedForm.formId });
-
-    // Compute recommendations when form is first created
-    await this.recommendationService.recomputeRecommendationsForClient(savedForm.clientId).catch(error => {
-      console.error(`Failed to compute recommendations for client ${savedForm.clientId}:`, error);
-    });
 
     return savedForm;
   }
@@ -78,7 +76,7 @@ export class EngagementService {
 
   // Opinion methods
   async createOpinion(createOpinionDto: CreateOpinionDto): Promise<Opinion> {
-    const { clientId, trainerId } = createOpinionDto;
+    const { clientId, trainerId, rating, comment } = createOpinionDto;
 
     const clientExists = await this.userService.clientExists(clientId);
     if (!clientExists) throw new NotFoundException(`Client with ID ${clientId} does not exist`);
@@ -86,12 +84,24 @@ export class EngagementService {
     const trainerExists = await this.userService.trainerExists(trainerId);
     if (!trainerExists) throw new NotFoundException(`Trainer with ID ${trainerId} does not exist`);
 
-    const hasCompleted = await this.schedulingService.clientHasCompletedWithTrainer(clientId, trainerId);
-    if (!hasCompleted) {
+    const completedTraining = await this.completedTrainingRepository.findOne({
+      where: {
+        client: { clientId },
+        trainer: { trainerId },
+      },
+    });
+
+    if (!completedTraining) {
       throw new BadRequestException('Client must have at least one completed training with this trainer to leave an opinion');
     }
 
-    const opinion = this.opinionRepository.create(createOpinionDto);
+    const opinion = this.opinionRepository.create({
+      rating,
+      comment,
+      clientId,
+      trainerId,
+    });
+
     return this.opinionRepository.save(opinion);
   }
 
