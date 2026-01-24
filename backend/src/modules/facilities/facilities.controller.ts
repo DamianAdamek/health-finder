@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, UseGuards, Request } from '@nestjs/common';
 import { FacilitiesService } from './facilities.service';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
@@ -29,8 +29,8 @@ export class FacilitiesController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a gym - GymAdmin or Admin only' })
   @ApiCreatedResponse({ description: 'Gym created', type: Gym })
-  createGym(@Body() createGymDto: CreateGymDto) {
-    return this.facilitiesService.createGym(createGymDto);
+  createGym(@Body() createGymDto: CreateGymDto, @Request() req) {
+    return this.facilitiesService.createGym(createGymDto, req.user);
   }
 
   @Get('gyms')

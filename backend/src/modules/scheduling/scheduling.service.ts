@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource, Not, IsNull } from 'typeorm';
 import { Schedule } from './entities/schedule.entity';
@@ -9,6 +9,7 @@ import { Gym } from 'src/modules/facilities/entities/gym.entity';
 import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
 import { Client } from 'src/modules/user-management/entities/client.entity';
 import { TrainingStatus } from '../../common/enums/training-status.enum';
+import { RecommendationService } from './recommendation.service';
 import {
     CreateScheduleDto,
     UpdateScheduleDto,
@@ -37,6 +38,8 @@ export class SchedulingService {
             @InjectRepository(Client)
             private clientRepository: Repository<Client>,
             private dataSource: DataSource,
+            @Inject(forwardRef(() => RecommendationService))
+            private recommendationService: RecommendationService,
     ) {}
 
     // Helper to check if a client has completed any training with a specific trainer
@@ -205,7 +208,7 @@ export class SchedulingService {
     async getScheduleById(id: number): Promise<Schedule> {
         const schedule = await this.scheduleRepository.findOne({
             where: { scheduleId: id },
-            relations: ['windows', 'trainings'],
+            relations: ['windows', 'windows.training'],
         });
         if (!schedule) {
             throw new NotFoundException(`Schedule with ID ${id} not found`);
@@ -596,9 +599,206 @@ export class SchedulingService {
     }
 
     async deleteTraining(id: number): Promise<void> {
-        const result = await this.trainingRepository.delete(id);
-        if (result.affected === 0) {
+        // First, check if training exists
+        const training = await this.trainingRepository.findOne({
+            where: { trainingId: id },
+            relations: ['window'],
+        });
+        
+        if (!training) {
             throw new NotFoundException(`Training with ID ${id} not found`);
         }
+
+        // Remove window reference to this training (if exists)
+        const window = await this.windowRepository.findOne({
+            where: { training: { trainingId: id } },
+        });
+        
+        if (window) {
+            // Set training reference to null and save
+            window.training = undefined;
+            await this.windowRepository.save(window);
+            // Then delete the window
+            await this.windowRepository.delete(window.windowId);
+        }
+
+        // Now delete the training
+        await this.trainingRepository.delete(id);
+    }
+
+    // Client Training Management
+    async getTrainingsForClient(clientId: number): Promise<Training[]> {
+        const client = await this.clientRepository.findOne({
+            where: { clientId },
+        });
+        if (!client) {
+            throw new NotFoundException(`Client with ID ${clientId} not found`);
+        }
+
+        return this.trainingRepository
+            .createQueryBuilder('training')
+            .innerJoin('training.clients', 'client')
+            .leftJoinAndSelect('training.room', 'room')
+            .leftJoinAndSelect('room.gym', 'gym')
+            .leftJoinAndSelect('gym.location', 'location')
+            .leftJoinAndSelect('training.trainer', 'trainer')
+            .leftJoinAndSelect('trainer.user', 'trainerUser')
+            .leftJoinAndSelect('training.window', 'window')
+            .leftJoinAndSelect('training.clients', 'clients')
+            .where('client.clientId = :clientId', { clientId })
+            .getMany();
+    }
+
+    async signUpForTraining(trainingId: number, clientId: number): Promise<Training> {
+        const training = await this.getTrainingById(trainingId);
+        const client = await this.clientRepository.findOne({
+            where: { clientId },
+            relations: ['schedule'],
+        });
+
+        if (!client) {
+            throw new NotFoundException(`Client with ID ${clientId} not found`);
+        }
+
+        // Check if training is planned
+        if (training.status !== TrainingStatus.PLANNED) {
+            throw new BadRequestException('You can only sign up for planned trainings');
+        }
+
+        // Check if client is already signed up
+        if (training.clients?.some(c => c.clientId === clientId)) {
+            throw new BadRequestException('You are already signed up for this training');
+        }
+
+        // Check if room capacity allows more clients
+        if (training.room?.capacity && training.clients?.length >= training.room.capacity) {
+            throw new BadRequestException('Training is full - no more spots available');
+        }
+
+        // Check for scheduling conflict if training has a window
+        if (training.window) {
+            if (await this.clientHasConflict(
+                clientId,
+                training.window.dayOfWeek,
+                training.window.startTime,
+                training.window.endTime
+            )) {
+                throw new BadRequestException('You have a scheduling conflict at this time');
+            }
+        }
+
+        // Add client to training
+        training.clients = [...(training.clients || []), client];
+
+        // Add training window to client's schedule if window exists and client has schedule
+        if (training.window && client.schedule) {
+            const window = await this.windowRepository.findOne({
+                where: { windowId: training.window.windowId },
+                relations: ['schedules'],
+            });
+            if (window && !window.schedules?.some(s => s.scheduleId === client.schedule.scheduleId)) {
+                window.schedules = [...(window.schedules || []), client.schedule];
+                await this.windowRepository.save(window);
+            }
+        }
+
+        await this.trainingRepository.save(training);
+
+        // Invalidate recommendation cache for this client to ensure fresh data
+        this.recommendationService.invalidateCacheForClient(clientId);
+
+        return this.getTrainingById(trainingId);
+    }
+
+    async cancelReservation(trainingId: number, clientId: number): Promise<Training> {
+        const training = await this.getTrainingById(trainingId);
+        const client = await this.clientRepository.findOne({
+            where: { clientId },
+            relations: ['schedule'],
+        });
+
+        if (!client) {
+            throw new NotFoundException(`Client with ID ${clientId} not found`);
+        }
+
+        // Check if client is signed up for this training
+        if (!training.clients?.some(c => c.clientId === clientId)) {
+            throw new BadRequestException('You are not signed up for this training');
+        }
+
+        // Check if training is still planned (can't cancel completed or cancelled trainings)
+        if (training.status !== TrainingStatus.PLANNED) {
+            throw new BadRequestException('You can only cancel reservations for planned trainings');
+        }
+
+        // 24-hour cancellation policy check
+        // We use window's dayOfWeek and startTime to calculate the next occurrence
+        if (training.window) {
+            const now = new Date();
+            const trainingDateTime = this.getNextTrainingDateTime(training.window.dayOfWeek, training.window.startTime);
+            const hoursUntilTraining = (trainingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+            if (hoursUntilTraining < 24) {
+                throw new BadRequestException('Cannot cancel reservation less than 24 hours before training');
+            }
+        }
+
+        // Remove client from training
+        training.clients = training.clients.filter(c => c.clientId !== clientId);
+
+        // Remove training window from client's schedule
+        if (training.window && client.schedule) {
+            const window = await this.windowRepository.findOne({
+                where: { windowId: training.window.windowId },
+                relations: ['schedules'],
+            });
+            if (window) {
+                window.schedules = (window.schedules || []).filter(s => s.scheduleId !== client.schedule.scheduleId);
+                await this.windowRepository.save(window);
+            }
+        }
+
+        await this.trainingRepository.save(training);
+
+        // Invalidate recommendation cache for this client to ensure fresh data
+        this.recommendationService.invalidateCacheForClient(clientId);
+
+        return this.getTrainingById(trainingId);
+    }
+
+    // Helper to get next occurrence of a training based on day and time
+    private getNextTrainingDateTime(dayOfWeek: DayOfWeek, startTime: string): Date {
+        const dayMap: Record<string, number> = {
+            'Monday': 1,
+            'Tuesday': 2,
+            'Wednesday': 3,
+            'Thursday': 4,
+            'Friday': 5,
+            'Saturday': 6,
+            'Sunday': 0,
+        };
+
+        const targetDay = dayMap[dayOfWeek];
+        const [hours, minutes] = startTime.split(':').map(Number);
+        
+        const now = new Date();
+        const result = new Date();
+        
+        // Calculate days until next occurrence
+        let daysUntil = targetDay - now.getDay();
+        if (daysUntil < 0) daysUntil += 7;
+        if (daysUntil === 0) {
+            // Same day - check if time has passed
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const trainingMinutes = hours * 60 + minutes;
+            if (currentMinutes >= trainingMinutes) {
+                daysUntil = 7; // Next week
+            }
+        }
+        
+        result.setDate(now.getDate() + daysUntil);
+        result.setHours(hours, minutes, 0, 0);
+        
+        return result;
     }
 }

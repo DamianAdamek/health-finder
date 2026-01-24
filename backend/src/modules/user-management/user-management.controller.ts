@@ -78,7 +78,7 @@ export class UserManagementController {
   @ApiOperation({ summary: 'Get current logged-in user profile' })
   @ApiResponse({ status: 200, description: 'Current user', type: User })
   async getCurrentUser(@CurrentUser() user: User): Promise<User> {
-    return user;
+    return this.userService.findOneUser(user.id);
   }
 
   @Patch('users/me')

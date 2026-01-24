@@ -163,6 +163,17 @@ export class SchedulingController {
         return this.schedulingService.getAllTrainings();
     }
 
+    // Client Training Management endpoints - MUST be before :id routes
+    @Get('trainings/my')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get all trainings for logged-in client' })
+    @ApiResponse({ status: 200, description: 'List of client trainings', type: [Training] })
+    async getMyTrainings(@CurrentUser() user: User): Promise<Training[]> {
+        return this.schedulingService.getTrainingsForClient(user.client.clientId);
+    }
+
     @Get('trainings/:id')
     @ApiOperation({ summary: 'Get training by ID - Public' })
     @ApiResponse({ status: 200, description: 'Training', type: Training })
@@ -239,5 +250,32 @@ export class SchedulingController {
     })
     async getRecommendationsForClient(@Param('clientId') clientId: string): Promise<RecommendedTraining[]> {
         return this.recommendationService.getRecommendationsForClient(+clientId);
+    }
+
+    // Client Training Sign-up and Cancel endpoints
+    @Post('trainings/:id/sign-up')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Sign up for a training' })
+    @ApiResponse({ status: 200, description: 'Successfully signed up', type: Training })
+    async signUpForTraining(
+        @Param('id') id: string,
+        @CurrentUser() user: User,
+    ): Promise<Training> {
+        return this.schedulingService.signUpForTraining(+id, user.client.clientId);
+    }
+
+    @Post('trainings/:id/cancel')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.CLIENT)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Cancel reservation for a training (24h policy)' })
+    @ApiResponse({ status: 200, description: 'Successfully cancelled', type: Training })
+    async cancelReservation(
+        @Param('id') id: string,
+        @CurrentUser() user: User,
+    ): Promise<Training> {
+        return this.schedulingService.cancelReservation(+id, user.client.clientId);
     }
 }
