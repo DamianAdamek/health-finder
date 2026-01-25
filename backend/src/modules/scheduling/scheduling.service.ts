@@ -5,10 +5,10 @@ import { Schedule } from './entities/schedule.entity';
 import { Window } from './entities/window.entity';
 import { Training } from './entities/training.entity';
 import { CompletedTraining } from './entities/completed-training.entity';
-import { Room } from 'src/modules/facilities/entities/room.entity';
-import { Gym } from 'src/modules/facilities/entities/gym.entity';
-import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
-import { Client } from 'src/modules/user-management/entities/client.entity';
+import { Room } from '../facilities/entities/room.entity';
+import { Gym } from '../facilities/entities/gym.entity';
+import { Trainer } from '../user-management/entities/trainer.entity';
+import { Client } from '../user-management/entities/client.entity';
 import { TrainingStatus } from '../../common/enums/training-status.enum';
 import { RecommendationService } from './recommendation.service';
 import {
@@ -20,7 +20,7 @@ import {
     UpdateTrainingDto,
     CreateCompletedTrainingDto,
 } from './dto';
-import { DayOfWeek } from 'src/common/enums';
+import { DayOfWeek } from '../../common/enums';
 
 @Injectable()
 export class SchedulingService {
@@ -915,6 +915,57 @@ export class SchedulingService {
         const result = await this.completedTrainingRepository.delete(id);
         if (result.affected === 0) {
             throw new NotFoundException(`Completed training with ID ${id} not found`);
+        }
+    }
+
+    async cancelTraining(trainingId: number, clientId: number): Promise<Training> {
+        const training = await this.trainingRepository.findOne({
+            where: { trainingId, clients: { clientId } },
+            relations: ['clients', 'window'],
+        });
+
+        if (!training) {
+            throw new NotFoundException(`Training with ID ${trainingId} not found`);
+        }
+
+        if (training.status === TrainingStatus.CANCELLED) {
+            throw new BadRequestException('Cannot cancel already cancelled training');
+        }
+
+        if (!training.window) {
+            throw new BadRequestException('Training is not assigned to any window');
+        }
+
+        // Check if cancellation is at least 1 hour before start time
+        // startTime is a string in HH:mm format
+        const [startHour, startMinute] = training.window.startTime.split(':').map(Number);
+        const startTimeInMinutes = startHour * 60 + startMinute;
+
+        const now = new Date();
+        const nowHour = now.getHours();
+        const nowMinute = now.getMinutes();
+        const nowTimeInMinutes = nowHour * 60 + nowMinute;
+
+        const minutesUntilTraining = startTimeInMinutes - nowTimeInMinutes;
+
+        if (minutesUntilTraining < 60) {
+            throw new BadRequestException('Cannot cancel training less than 1 hour before start time');
+        }
+
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            training.status = TrainingStatus.CANCELLED;
+            const result = await queryRunner.manager.save(training);
+            await queryRunner.commitTransaction();
+            return result;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
     }
 }

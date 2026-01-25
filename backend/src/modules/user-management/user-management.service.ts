@@ -12,8 +12,8 @@ import { Gym } from '../facilities/entities/gym.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateTrainerDto } from './dto/create-trainer.dto';
 import { CreateGymAdminDto } from './dto/create-gym-admin.dto';
-import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
-import { Location } from 'src/modules/facilities/entities/location.entity';
+import { Schedule } from '../scheduling/entities/schedule.entity';
+import { Location } from '../facilities/entities/location.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -274,16 +274,18 @@ export class UserManagementService {
       apartmentNumber,
     };
 
-    const hasAnyLocationField = Object.values(locationData).some(
-      (value) => value !== undefined,
+    const definedLocationData = Object.fromEntries(
+      Object.entries(locationData).filter(([, value]) => value !== undefined),
     );
+
+    const hasAnyLocationField = Object.keys(definedLocationData).length > 0;
 
     if (hasAnyLocationField) {
       if (client.location) {
-        Object.assign(client.location, locationData);
+        Object.assign(client.location, definedLocationData);
         await this.locationRepository.save(client.location);
       } else {
-        const newLocation = this.locationRepository.create(locationData);
+        const newLocation = this.locationRepository.create(definedLocationData);
         client.location = await this.locationRepository.save(newLocation);
         await this.clientRepository.save(client);
       }

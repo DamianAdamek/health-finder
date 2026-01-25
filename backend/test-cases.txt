@@ -1,0 +1,527 @@
+PRZYPADKI TESTOWE - HEALTH FINDER
+===================================
+
+Use Case: Zarządzaj danymi personalnymi
+=========================================
+
+TC-01: Aktualizacja adresu klienta z automatycznym przeliczeniem rekomendacji
+------------------------------------------------------------------------------
+Priorytet: Wysoki
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=1 jest zalogowany w systemie
+- Klient ma przypisaną lokalizację: Warszawa, 00-001, ul. Główna 10
+- W systemie istnieją dostępne lokalizacje treningowe w bazie danych
+
+Kroki:
+1. Klient wywołuje endpoint PATCH /user-management/clients/1
+2. W ciele żądania podaje nowe dane: { "city": "Kraków", "zipCode": "30-001" }
+3. System zapisuje zaktualizowaną lokalizację
+4. System automatycznie wywołuje przeliczenie rekomendacji treningowych
+
+Oczekiwany rezultat:
+- Dane lokalizacji klienta zostają zaktualizowane (city=Kraków, zipCode=30-001)
+- Pozostałe pola lokalizacji (street, buildingNumber) pozostają niezmienione
+- System przelicza rekomendacje lokalizacji treningowych na podstawie nowej lokalizacji
+- Odpowiedź HTTP 200 z zaktualizowanymi danymi klienta
+
+
+TC-02: Aktualizacja danych osobowych bez wpływu na rekomendacje
+----------------------------------------------------------------
+Priorytet: Średni
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=2 jest zalogowany
+- Klient ma e-mail: jan.kowalski@example.com
+- Klient ma numer telefonu: +48123456789
+
+Kroki:
+1. Klient wywołuje endpoint PATCH /user-management/clients/2
+2. W ciele żądania podaje: { "firstName": "Jan", "contactNumber": "+48987654321" }
+3. System aktualizuje dane osobowe
+
+Oczekiwany rezultat:
+- Imię i numer telefonu zostają zaktualizowane
+- Funkcja recomputeRecommendationsForClient NIE jest wywoływana
+- Odpowiedź HTTP 200 z zaktualizowanymi danymi
+
+
+TC-03: Próba aktualizacji z nieistniejącym ID formularza
+---------------------------------------------------------
+Priorytet: Wysoki
+Typ: Negatywny
+
+Warunki wstępne:
+- Klient o ID=3 jest zalogowany
+- W bazie nie istnieje formularz o ID=9999
+
+Kroki:
+1. Klient wywołuje endpoint PATCH /user-management/clients/3
+2. W ciele żądania podaje: { "formId": 9999 }
+3. System próbuje znaleźć formularz o podanym ID
+
+Oczekiwany rezultat:
+- System zwraca błąd NotFoundException
+- Odpowiedź HTTP 404 z komunikatem: "Form with ID 9999 not found"
+- Dane klienta pozostają niezmienione
+- Rekomendacje NIE są przeliczane
+
+
+TC-04: Aktualizacja lokalizacji z jednoczesnym błędem serwisu rekomendacji
+---------------------------------------------------------------------------
+Priorytet: Średni
+Typ: Negatywny
+
+Warunki wstępne:
+- Klient o ID=4 jest zalogowany
+- Serwis rekomendacji jest niedostępny/zwraca błąd
+
+Kroki:
+1. Klient wywołuje endpoint PATCH /user-management/clients/4
+2. W ciele żądania podaje: { "city": "Gdańsk" }
+3. System zapisuje nową lokalizację
+4. System próbuje przeliczać rekomendacje, ale otrzymuje błąd
+
+Oczekiwany rezultat:
+- Dane lokalizacji klienta zostają zapisane pomimo błędu rekomendacji
+- Błąd rekomendacji jest logowany w konsoli
+- Odpowiedź HTTP 200 z zaktualizowanymi danymi klienta
+- Transakcja NIE jest wycofywana (dane klienta pozostają zaktualizowane)
+
+
+
+Use Case: Zarządzaj danymi treningowymi (formularzem)
+======================================================
+
+TC-05: Aktualizacja formularza treningowego z przeliczeniem rekomendacji
+-------------------------------------------------------------------------
+Priorytet: Wysoki
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=5 ma wypełniony formularz o ID=10
+- Formularz zawiera: activityLevel=SEDENTARY, trainingTypes=[CARDIO]
+- W systemie istnieją treningi odpowiadające różnym poziomom aktywności
+
+Kroki:
+1. Klient wywołuje endpoint PATCH /engagement/forms/10
+2. W ciele żądania podaje: { 
+     "activityLevel": "MODERATELY_ACTIVE",
+     "trainingTypes": ["STRENGTH", "FLEXIBILITY"],
+     "trainingGoal": "Zwiększenie masy mięśniowej"
+   }
+3. System aktualizuje formularz
+4. System automatycznie przelicza rekomendacje treningowe
+
+Oczekiwany rezultat:
+- Dane formularza zostają zaktualizowane
+- System wywołuje recomputeRecommendationsForClient(clientId)
+- Rekomendacje treningów są dostosowane do nowego poziomu aktywności i celów
+- Odpowiedź HTTP 200 z zaktualizowanym formularzem
+
+
+TC-06: Utworzenie nowego formularza dla klienta
+------------------------------------------------
+Priorytet: Wysoki
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=6 istnieje w systemie
+- Klient NIE ma przypisanego formularza
+
+Kroki:
+1. System/Admin wywołuje endpoint POST /engagement/forms
+2. W ciele żądania podaje: {
+     "clientId": 6,
+     "activityLevel": "ACTIVE",
+     "trainingTypes": ["CARDIO", "STRENGTH"],
+     "trainingGoal": "Utrata wagi",
+     "healthProfile": "Brak przeciwwskazań zdrowotnych"
+   }
+3. System tworzy nowy formularz i przypisuje go do klienta
+
+Oczekiwany rezultat:
+- Nowy formularz zostaje utworzony w bazie danych
+- Formularz jest powiązany z klientem o ID=6
+- Odpowiedź HTTP 201 z danymi utworzonego formularza
+
+
+TC-07: Aktualizacja formularza z niepowodzeniem przeliczenia rekomendacji
+--------------------------------------------------------------------------
+Priorytet: Średni
+Typ: Negatywny
+
+Warunki wstępne:
+- Formularz o ID=15 istnieje dla klienta o ID=7
+- Serwis rekomendacji zwraca błąd podczas przeliczania
+
+Kroki:
+1. Wywołanie endpoint PATCH /engagement/forms/15
+2. Podanie nowych danych: { "trainingGoal": "Nowy cel treningowy" }
+3. System zapisuje zaktualizowany formularz
+4. System próbuje przeliczać rekomendacje, ale otrzymuje błąd
+
+Oczekiwany rezultat:
+- Formularz zostaje zaktualizowany pomimo błędu rekomendacji
+- Błąd jest obsługiwany (catch) i logowany
+- Odpowiedź HTTP 200 z zaktualizowanym formularzem
+- System nie przerywa operacji z powodu błędu rekomendacji
+
+
+TC-08: Próba aktualizacji nieistniejącego formularza
+-----------------------------------------------------
+Priorytet: Średni
+Typ: Negatywny
+
+Warunki wstępne:
+- Formularz o ID=8888 NIE istnieje w bazie danych
+
+Kroki:
+1. Wywołanie endpoint PATCH /engagement/forms/8888
+2. Podanie danych do aktualizacji
+
+Oczekiwany rezultat:
+- System zwraca błąd NotFoundException
+- Odpowiedź HTTP 404 z komunikatem: "Form with ID 8888 not found"
+- Funkcja recomputeRecommendationsForClient NIE jest wywoływana
+
+
+TC-09: Przypisanie formularza do klienta poprzez updateClient
+--------------------------------------------------------------
+Priorytet: Wysoki
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=8 istnieje bez przypisanego formularza
+- Formularz o ID=20 istnieje i nie jest przypisany do żadnego klienta
+
+Kroki:
+1. Wywołanie endpoint PATCH /user-management/clients/8
+2. Podanie: { "formId": 20 }
+3. System przypisuje formularz do klienta
+4. System przelicza rekomendacje
+
+Oczekiwany rezultat:
+- Klient otrzymuje referencję do formularza o ID=20
+- System wywołuje recomputeRecommendationsForClient(8)
+- Rekomendacje są generowane na podstawie danych z formularza
+- Odpowiedź HTTP 200 z zaktualizowanymi danymi klienta
+
+
+
+Use Case: Anuluj rezerwację treningu
+=====================================
+
+TC-10: Anulowanie treningu z wyprzedzeniem większym niż 1 godzina
+------------------------------------------------------------------
+Priorytet: Krytyczny
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=9 ma zarezerwowany trening o ID=100
+- Trening jest zaplanowany na dzisiaj o godzinie 16:00 (window.startTime = "16:00")
+- Obecna godzina systemowa to 13:30 (różnica > 1 godzina)
+
+Kroki:
+1. Klient wywołuje endpoint POST /scheduling/trainings/100/cancel
+2. W ciele żądania podaje: { "clientId": 9 }
+3. System sprawdza czas do rozpoczęcia treningu
+4. System anuluje rezerwację w transakcji
+
+Oczekiwany rezultat:
+- Status treningu zmienia się na CANCELLED
+- Transakcja jest commitowana
+- Klient otrzymuje potwierdzenie anulowania
+- Odpowiedź HTTP 200 z zaktualizowanymi danymi treningu (status=CANCELLED)
+
+
+TC-11: Próba anulowania treningu z wyprzedzeniem mniejszym niż 1 godzina
+-------------------------------------------------------------------------
+Priorytet: Krytyczny
+Typ: Negatywny
+
+Warunki wstępne:
+- Klient o ID=10 ma zarezerwowany trening o ID=101
+- Trening jest zaplanowany na dzisiaj o godzinie 15:00 (window.startTime = "15:00")
+- Obecna godzina systemowa to 14:30 (różnica < 1 godzina)
+
+Kroki:
+1. Klient wywołuje endpoint POST /scheduling/trainings/101/cancel
+2. W ciele żądania podaje: { "clientId": 10 }
+3. System sprawdza czas do rozpoczęcia treningu
+4. System wykrywa, że termin jest za późno
+
+Oczekiwany rezultat:
+- System zwraca błąd BadRequestException
+- Odpowiedź HTTP 400 z komunikatem: "Cannot cancel training less than 1 hour before start time"
+- Status treningu pozostaje niezmieniony (np. SCHEDULED)
+- Transakcja jest wycofywana (rollback)
+
+
+TC-12: Anulowanie treningu przez niepowiązanego klienta
+--------------------------------------------------------
+Priorytet: Wysoki
+Typ: Negatywny
+
+Warunki wstępne:
+- Trening o ID=102 jest zarezerwowany przez klienta o ID=11
+- Klient o ID=99 (inny klient) próbuje anulować ten trening
+- Wyprzedzenie czasowe jest odpowiednie (> 1 godzina)
+
+Kroki:
+1. Klient o ID=99 wywołuje endpoint POST /scheduling/trainings/102/cancel
+2. W ciele żądania podaje: { "clientId": 99 }
+3. System sprawdza uprawnienia
+
+Oczekiwany rezultat:
+- System zwraca błąd ForbiddenException lub BadRequestException
+- Odpowiedź HTTP 403 lub 400
+- Status treningu pozostaje niezmieniony
+- Transakcja jest wycofywana
+
+
+TC-13: Anulowanie nieistniejącego treningu
+-------------------------------------------
+Priorytet: Średni
+Typ: Negatywny
+
+Warunki wstępne:
+- Trening o ID=9999 NIE istnieje w bazie danych
+
+Kroki:
+1. Klient wywołuje endpoint POST /scheduling/trainings/9999/cancel
+2. W ciele żądania podaje: { "clientId": 12 }
+3. System próbuje odnaleźć trening
+
+Oczekiwany rezultat:
+- System zwraca błąd NotFoundException
+- Odpowiedź HTTP 404 z komunikatem: "Training with ID 9999 not found"
+- Transakcja jest wycofywana
+
+
+TC-14: Anulowanie treningu z błędem transakcji
+-----------------------------------------------
+Priorytet: Średni
+Typ: Negatywny
+
+Warunki wstępne:
+- Trening o ID=103 istnieje z odpowiednim wyprzedzeniem
+- Podczas zapisu wystąpi błąd bazy danych (np. connection timeout)
+
+Kroki:
+1. Klient wywołuje endpoint POST /scheduling/trainings/103/cancel
+2. System rozpoczyna transakcję
+3. Podczas save() wystąpi błąd bazy danych
+4. System obsługuje wyjątek w bloku catch
+
+Oczekiwany rezultat:
+- Transakcja jest wycofywana (rollback)
+- System zwraca błąd InternalServerErrorException
+- Odpowiedź HTTP 500
+- Stan treningu pozostaje niezmieniony (dane są spójne)
+
+
+
+Use Case: Dodaj ocenę i opinię trenerowi
+=========================================
+
+TC-15: Dodanie nowej opinii dla trenera
+----------------------------------------
+Priorytet: Wysoki
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=13 jest zalogowany
+- Trener o ID=5 istnieje w systemie
+- Klient NIE ma wcześniejszej opinii o tym trenerze
+
+Kroki:
+1. Klient wywołuje endpoint POST /engagement/opinions
+2. W ciele żądania podaje: {
+     "clientId": 13,
+     "trainerId": 5,
+     "rating": 5,
+     "comment": "Świetny trener, bardzo profesjonalny!"
+   }
+3. System tworzy nową opinię w bazie danych
+4. System aktualizuje średnią ocenę trenera
+
+Oczekiwany rezultat:
+- Nowa opinia zostaje zapisana w bazie
+- Ocena trenera (trainer.rating) jest przeliczana i zaktualizowana
+- Odpowiedź HTTP 201 z danymi utworzonej opinii
+- Zwrócone dane zawierają: opinionId, clientId, trainerId, rating, comment, createdAt
+
+
+TC-16: Dodanie opinii z oceną graniczną (wartość minimalna)
+------------------------------------------------------------
+Priorytet: Średni
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=14 jest zalogowany
+- Trener o ID=6 istnieje w systemie
+
+Kroki:
+1. Klient wywołuje endpoint POST /engagement/opinions
+2. W ciele żądania podaje: {
+     "clientId": 14,
+     "trainerId": 6,
+     "rating": 1,
+     "comment": "Niestety trening nie spełnił moich oczekiwań"
+   }
+3. System waliduje ocenę (rating >= 1)
+4. System zapisuje opinię
+
+Oczekiwany rezultat:
+- Opinia z oceną 1 zostaje zaakceptowana i zapisana
+- Średnia ocena trenera jest obniżona
+- Odpowiedź HTTP 201 z danymi opinii
+
+
+TC-17: Próba dodania opinii z nieprawidłową oceną
+--------------------------------------------------
+Priorytet: Wysoki
+Typ: Negatywny
+
+Warunki wstępne:
+- Klient o ID=15 jest zalogowany
+- Trener o ID=7 istnieje
+
+Kroki:
+1. Klient wywołuje endpoint POST /engagement/opinions
+2. W ciele żądania podaje: {
+     "clientId": 15,
+     "trainerId": 7,
+     "rating": 6,
+     "comment": "Próba ocenienia powyżej skali"
+   }
+3. System waliduje dane wejściowe (rating musi być 1-5)
+
+Oczekiwany rezultat:
+- System zwraca błąd walidacji BadRequestException
+- Odpowiedź HTTP 400 z komunikatem o nieprawidłowej wartości ratingu
+- Opinia NIE zostaje zapisana w bazie
+- Ocena trenera pozostaje niezmieniona
+
+
+TC-18: Dodanie opinii dla nieistniejącego trenera
+--------------------------------------------------
+Priorytet: Średni
+Typ: Negatywny
+
+Warunki wstępne:
+- Klient o ID=16 jest zalogowany
+- Trener o ID=9999 NIE istnieje w systemie
+
+Kroki:
+1. Klient wywołuje endpoint POST /engagement/opinions
+2. W ciele żądania podaje: {
+     "clientId": 16,
+     "trainerId": 9999,
+     "rating": 4,
+     "comment": "Dobry trening"
+   }
+3. System próbuje znaleźć trenera
+
+Oczekiwany rezultat:
+- System zwraca błąd NotFoundException
+- Odpowiedź HTTP 404 z komunikatem: "Trainer with ID 9999 not found"
+- Opinia NIE zostaje utworzona
+
+
+TC-19: Aktualizacja istniejącej opinii
+---------------------------------------
+Priorytet: Wysoki
+Typ: Pozytywny
+
+Warunki wstępne:
+- Opinia o ID=50 istnieje (clientId=17, trainerId=8, rating=3)
+- Klient chce zmienić swoją opinię
+
+Kroki:
+1. Klient wywołuje endpoint PATCH /engagement/opinions/50
+2. W ciele żądania podaje: {
+     "rating": 5,
+     "comment": "Po kilku kolejnych treningach zmieniam opinię - rewelacja!"
+   }
+3. System aktualizuje opinię
+4. System przelicza średnią ocenę trenera
+
+Oczekiwany rezultat:
+- Opinia zostaje zaktualizowana z nowymi danymi
+- Średnia ocena trenera jest przeliczona (wzrasta z 3 do 5 dla tej opinii)
+- Odpowiedź HTTP 200 z zaktualizowaną opinią
+
+
+TC-20: Usunięcie opinii
+------------------------
+Priorytet: Średni
+Typ: Pozytywny
+
+Warunki wstępne:
+- Opinia o ID=51 istnieje (clientId=18, trainerId=9, rating=4)
+- Klient decyduje się usunąć swoją opinię
+
+Kroki:
+1. Klient wywołuje endpoint DELETE /engagement/opinions/51
+2. System znajduje opinię
+3. System usuwa opinię z bazy
+4. System przelicza średnią ocenę trenera (bez usuniętej opinii)
+
+Oczekiwany rezultat:
+- Opinia zostaje usunięta z bazy danych
+- Średnia ocena trenera jest przeliczona (bez uwzględnienia usuniętej opinii)
+- Odpowiedź HTTP 200
+- Ponowne zapytanie o opinię zwraca HTTP 404
+
+
+TC-21: Dodanie opinii bez komentarza (tylko ocena)
+---------------------------------------------------
+Priorytet: Niski
+Typ: Pozytywny
+
+Warunki wstępne:
+- Klient o ID=19 jest zalogowany
+- Trener o ID=10 istnieje
+- Komentarz jest opcjonalny w DTO
+
+Kroki:
+1. Klient wywołuje endpoint POST /engagement/opinions
+2. W ciele żądania podaje: {
+     "clientId": 19,
+     "trainerId": 10,
+     "rating": 4
+   }
+   (brak pola comment)
+3. System waliduje i zapisuje opinię
+
+Oczekiwany rezultat:
+- Opinia zostaje zapisana z oceną 4 i pustym/null komentarzem
+- Średnia ocena trenera jest zaktualizowana
+- Odpowiedź HTTP 201 z danymi opinii (comment może być null lub pusty string)
+
+
+
+PODSUMOWANIE POKRYCIA
+======================
+
+Use Case: Zarządzaj danymi personalnymi
+- Przypadków testowych: 4 (TC-01 do TC-04)
+- Pokrycie: aktualizacja lokalizacji, dane osobowe, błędy walidacji, obsługa błędów serwisu
+
+Use Case: Zarządzaj danymi treningowymi
+- Przypadków testowych: 5 (TC-05 do TC-09)
+- Pokrycie: aktualizacja formularza, utworzenie formularza, obsługa błędów, przypisanie formularza
+
+Use Case: Anuluj rezerwację treningu
+- Przypadków testowych: 5 (TC-10 do TC-14)
+- Pokrycie: anulowanie z odpowiednim wyprzedzeniem, za późne anulowanie, uprawnienia, błędy transakcji
+
+Use Case: Dodaj ocenę i opinię trenerowi
+- Przypadków testowych: 7 (TC-15 do TC-21)
+- Pokrycie: dodawanie opinii, aktualizacja, usuwanie, walidacja ocen, błędy
+
+RAZEM: 21 przypadków testowych

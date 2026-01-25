@@ -4,16 +4,16 @@ import { Repository, DataSource, In } from 'typeorm';
 import { Gym } from './entities/gym.entity';
 import { Location } from './entities/location.entity';
 import { Room } from './entities/room.entity';
-import { Schedule } from 'src/modules/scheduling/entities/schedule.entity';
-import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
-import { GymAdmin } from 'src/modules/user-management/entities/gym-admin.entity';
+import { Schedule } from '../scheduling/entities/schedule.entity';
+import { Trainer } from '../user-management/entities/trainer.entity';
+import { GymAdmin } from '../user-management/entities/gym-admin.entity';
 import { CreateGymDto } from './dto/create-gym.dto';
 import { UpdateGymDto } from './dto/update-gym.dto';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
-import { UserRole } from 'src/common/enums';
+import { UserRole } from '../../common/enums';
 
 @Injectable()
 export class FacilitiesService {

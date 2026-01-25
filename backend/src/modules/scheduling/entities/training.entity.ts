@@ -11,9 +11,9 @@ import {
     CreateDateColumn
 } from 'typeorm';
 import { TrainingStatus, TrainingType } from '../../../common/enums';
-import { Room } from 'src/modules/facilities/entities/room.entity';
-import { Trainer } from 'src/modules/user-management/entities/trainer.entity';
-import { Client } from 'src/modules/user-management/entities/client.entity';
+import { Room } from '../../facilities/entities/room.entity';
+import { Trainer } from '../../user-management/entities/trainer.entity';
+import { Client } from '../../user-management/entities/client.entity';
 import { Window } from './window.entity';
 
 @Entity('training')
