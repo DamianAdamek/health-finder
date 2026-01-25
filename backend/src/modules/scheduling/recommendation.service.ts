@@ -65,10 +65,10 @@ export class RecommendationService {
       return cachedResult;
     }
 
-    // 1. Get client with location and form
+    // 1. Get client with location, form, and schedule with windows
     const client = await this.clientRepository.findOne({
       where: { clientId },
-      relations: ['location', 'form'],
+      relations: ['location', 'form', 'schedule', 'schedule.windows'],
     });
 
     if (!client) {
@@ -101,7 +101,43 @@ export class RecommendationService {
       );
     }
 
-    // 6. Calculate distances and sort
+    // 6. Filter trainings: exclude if client is already enrolled or if it doesn't fit in availability
+    filteredTrainings = filteredTrainings.filter(training => {
+      // Check if client is already enrolled in this training
+      if (training.clients && training.clients.some(c => c.clientId === clientId)) {
+        return false;
+      }
+
+      // Check if training fits in client's availability windows
+      if (training.window && client.schedule && client.schedule.windows) {
+        const trainingWindow = training.window;
+        const clientAvailabilityWindows = client.schedule.windows;
+
+        // Check if there's any client availability window that matches the training's day and time
+        const fitsInAvailability = clientAvailabilityWindows.some(availWindow => {
+          // Must be same day of week
+          if (availWindow.dayOfWeek !== trainingWindow.dayOfWeek) {
+            return false;
+          }
+
+          // Check if training time fits within availability window
+          return this.trainingFitsInWindow(
+            trainingWindow.startTime,
+            trainingWindow.endTime,
+            availWindow.startTime,
+            availWindow.endTime
+          );
+        });
+
+        if (!fitsInAvailability) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // 7. Calculate distances and sort
     const trainingsWithDistance: RecommendedTraining[] = [];
 
     for (const training of filteredTrainings) {
@@ -114,7 +150,7 @@ export class RecommendationService {
       }
     }
 
-    // 7. Sort by distance (nearest first) and return top recommendations
+    // 8. Sort by distance (nearest first) and return top recommendations
     trainingsWithDistance.sort((a, b) => a.distance - b.distance);
     const result = trainingsWithDistance.slice(0, 10); // Return top 10 nearest
 
@@ -123,5 +159,28 @@ export class RecommendationService {
     this.cacheTimestamps.set(clientId, Date.now());
 
     return result;
+  }
+
+  /**
+   * Check if training time window fits within client's availability window
+   */
+  private trainingFitsInWindow(
+    trainingStart: string,
+    trainingEnd: string,
+    availabilityStart: string,
+    availabilityEnd: string
+  ): boolean {
+    const [tStartH, tStartM] = trainingStart.split(':').map(Number);
+    const [tEndH, tEndM] = trainingEnd.split(':').map(Number);
+    const [aStartH, aStartM] = availabilityStart.split(':').map(Number);
+    const [aEndH, aEndM] = availabilityEnd.split(':').map(Number);
+
+    const trainingStartMinutes = tStartH * 60 + tStartM;
+    const trainingEndMinutes = tEndH * 60 + tEndM;
+    const availStartMinutes = aStartH * 60 + aStartM;
+    const availEndMinutes = aEndH * 60 + aEndM;
+
+    // Training must start at or after availability start and end at or before availability end
+    return trainingStartMinutes >= availStartMinutes && trainingEndMinutes <= availEndMinutes;
   }
 }
