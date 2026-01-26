@@ -44,7 +44,16 @@ export class FacilitiesService {
     const schedule = this.scheduleRepository.create();
     await this.scheduleRepository.save(schedule);
 
-    const gym = this.gymRepository.create({ ...createGymDto, schedule });
+    // Separate rooms from the gym data
+    const { rooms, ...gymData } = createGymDto;
+
+    const gym = this.gymRepository.create({ ...gymData, schedule });
+    
+    // If rooms are provided, create them with the gym
+    if (rooms && rooms.length > 0) {
+      gym.rooms = rooms.map(room => this.roomRepository.create(room));
+    }
+
     const savedGym = await this.gymRepository.save(gym);
 
     // If the user is a GYM_ADMIN, automatically assign this gym to them
@@ -157,8 +166,11 @@ export class FacilitiesService {
 
   // Room methods
   async createRoom(createRoomDto: CreateRoomDto): Promise<Room> {
-    const gymExists = await this.gymRepository.exists({ where: { gymId: createRoomDto.gymId } });
-    if (!gymExists) throw new NotFoundException(`Gym with ID ${createRoomDto.gymId} does not exist`);
+    // Only validate gymId if it's provided (i.e., creating a room directly after gym creation)
+    if (createRoomDto.gymId) {
+      const gymExists = await this.gymRepository.exists({ where: { gymId: createRoomDto.gymId } });
+      if (!gymExists) throw new NotFoundException(`Gym with ID ${createRoomDto.gymId} does not exist`);
+    }
 
     const room = this.roomRepository.create(createRoomDto);
     return this.roomRepository.save(room);

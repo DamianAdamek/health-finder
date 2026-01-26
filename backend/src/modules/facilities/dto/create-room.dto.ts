@@ -16,8 +16,9 @@ export class CreateRoomDto {
   capacity?: number;
   
   @Type(() => Number)
+  @IsOptional()
   @IsInt({ message: 'Gym ID must be an integer' })
   @Min(1, { message: 'Gym ID must be at least 1' })
-  @ApiProperty({ example: 1 })
-  gymId: number;
+  @ApiProperty({ example: 1, required: false })
+  gymId?: number;
 }
