@@ -1,0 +1,102 @@
+@startuml Add Opinion Sequence Diagram
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam maxMessageSize 150
+
+title Diagram sekwencji: Dodawanie opinii o trenerze
+
+actor "Użytkownik\n(Client)" as User
+participant "ClientCompleted\nTrainings" as Frontend
+participant "Engagement\nController" as Controller
+participant "Engagement\nService" as Service
+participant "UserManagement\nService" as UserService
+database "Database" as DB
+
+== Basic Flow ==
+
+User -> Frontend: 1. Przechodzi do\nhistorii treningów
+
+Frontend -> "Scheduling API": GET /completed-trainings/me
+"Scheduling API" --> Frontend: CompletedTraining[]
+
+Frontend --> User: Wyświetla listę\nzakończonych treningów
+
+User -> Frontend: 2. Wybiera trening\ni klika "Dodaj opinię"
+
+Frontend -> Frontend: Otwiera dialog z formularzem\n(gwiazdki 1-5, pole tekstowe)
+
+User -> Frontend: 3. Wprowadza ocenę\n(np. 1-5) i tekst opinii
+
+User -> Frontend: 4. Zatwierdza formularz\n(klika "Zapisz")
+
+Frontend -> Frontend: Walidacja po stronie klienta\n(rating required: 1-5)
+
+alt Wymagane pola wypełnione
+    
+    Frontend -> Controller: POST /engagement/opinions\n{rating, comment, clientId, trainerId}
+    
+    Controller -> Controller: 5. Walidacja danych\n(rating 1-5, clientId, trainerId)
+    
+    alt Dane poprawne
+        
+        Controller -> Service: createOpinion(dto)
+        
+        Service -> UserService: clientExists(clientId)
+        UserService -> DB: SELECT COUNT(*) FROM clients
+        DB --> UserService: exists = true
+        UserService --> Service: true
+        
+        Service -> UserService: trainerExists(trainerId)
+        UserService -> DB: SELECT COUNT(*) FROM trainers
+        DB --> UserService: exists = true
+        UserService --> Service: true
+        
+        Service -> DB: SELECT completed_training\nWHERE clientId = ? AND trainerId = ?
+        
+        alt Klient ma zakończony trening z trenerem
+            DB --> Service: CompletedTraining found
+            
+            Service -> DB: INSERT INTO opinions\n(rating, comment, clientId, trainerId)
+            DB --> Service: Opinion created
+            
+            Service -> Service: updateTrainerRating(trainerId)
+            Service -> DB: SELECT * FROM opinions\nWHERE trainerId = ?
+            DB --> Service: All trainer opinions
+            Service -> Service: Oblicza średnią ocenę
+            Service -> UserService: updateTrainer(trainerId, {rating})
+            UserService -> DB: UPDATE trainers\nSET rating = ?
+            DB --> UserService: Trainer updated
+            UserService --> Service: Updated
+            
+            Service --> Controller: Opinion
+            Controller --> Frontend: 201 Created (Opinion)
+            
+            Frontend --> User: 5. Potwierdzenie\n"Opinia dodana"
+            
+        else Brak zakończonego treningu
+            DB --> Service: Not found
+            Service --> Controller: 400 Bad Request\n"Must have completed training"
+            Controller --> Frontend: Error message
+            Frontend --> User: Komunikat o błędzie
+        end
+        
+    else Błąd walidacji (Alt 5.1)
+        Controller --> Frontend: 400 Bad Request\n{errors: ["Rating must be 1-5", ...]}
+        note right of Frontend
+            **Alternative Flow 5.1**
+            Użytkownik nie wypełnia wymaganych pól
+        end note
+        Frontend --> User: Komunikat o brakach\n"Proszę uzupełnić ocenę"
+    end
+    
+else Pola nie wypełnione (Alt 5.1)
+    Frontend --> User: Walidacja kliencka:\n"Rating jest wymagany"
+end
+
+== Alternative Flow 5.2: Rezygnacja ==
+
+User -> Frontend: Wybiera "Cofnij"\n(w dowolnym momencie)
+Frontend -> Frontend: Zamyka dialog
+Frontend --> User: Powrót do historii\n(bez zapisu)
+
+@enduml

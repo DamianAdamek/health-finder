@@ -83,15 +83,12 @@ describe('Use Case: Zarządzaj danymi personalnymi (E2E)', () => {
    */
   describe('TC-01: Aktualizacja adresu klienta z automatycznym przeliczeniem rekomendacji', () => {
     it('should update client location and trigger recommendation recomputation', async () => {
-      // ARRANGE: Klient ma lokalizację w Warszawie
       expect(testClient.location.city).toBe('Warszawa');
       
-      // Get initial recommendations for Warsaw
       const initialRecommendations = await request(app.getHttpServer())
         .get(`/scheduling/recommendations/${testClient.clientId}`)
         .expect(200);
 
-      // ACT: Zaktualizuj lokalizację na Kraków
       const updateResponse = await request(app.getHttpServer())
         .patch(`/user-management/clients/${testClient.clientId}`)
         .send({
@@ -100,31 +97,24 @@ describe('Use Case: Zarządzaj danymi personalnymi (E2E)', () => {
         })
         .expect(200);
 
-      // ASSERT: Dane lokalizacji zostały zaktualizowane
       expect(updateResponse.body.location.city).toBe('Kraków');
       expect(updateResponse.body.location.zipCode).toBe('30-001');
       
-      // ASSERT: Pozostałe pola lokalizacji pozostają niezmienione
       expect(updateResponse.body.location.street).toBe('ul. Główna');
       expect(updateResponse.body.location.buildingNumber).toBe('10');
       expect(updateResponse.body.location.apartmentNumber).toBe('5');
 
-      // ASSERT: System przeliczył rekomendacje (include: Wyszukaj propozycje treningów)
       const newRecommendations = await request(app.getHttpServer())
         .get(`/scheduling/recommendations/${testClient.clientId}`)
         .expect(200);
 
-      // Verify recommendations were recomputed (response should be fresh, not cached)
       expect(newRecommendations.body).toBeDefined();
       expect(Array.isArray(newRecommendations.body)).toBe(true);
       
-      // Recommendations should be different (based on new location)
-      // Note: This assumes we have gyms in both locations for realistic comparison
       if (initialRecommendations.body.length > 0 && newRecommendations.body.length > 0) {
         const initialFirstGymId = initialRecommendations.body[0]?.training?.room?.gym?.gymId;
         const newFirstGymId = newRecommendations.body[0]?.training?.room?.gym?.gymId;
         
-        // The order or content should potentially be different based on distance
         console.log('Initial recommendations count:', initialRecommendations.body.length);
         console.log('New recommendations count:', newRecommendations.body.length);
       }

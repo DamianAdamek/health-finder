@@ -1,86 +1,85 @@
-# Health Finder - Backend API
+# Health Finder
 
-Backend systemu zarządzania siłownią/placówką zdrowia. Aplikacja oparta jest na frameworku **NestJS** oraz bazie danych **PostgreSQL**. Całe środowisko jest skonteneryzowane przy użyciu **Docker Compose**.
+System zarządzania siłownią/placówką zdrowia. Aplikacja składa się z backendu opartego na **NestJS**, frontendu zbudowanego w **React** oraz bazy danych **PostgreSQL**. Całe środowisko jest skonteneryzowane przy użyciu **Docker Compose**.
 
-## 📋 Wymagania
+## Wymagania
 
 - **Docker** oraz **Docker Compose** zainstalowane na komputerze.
-- (Opcjonalnie) **Node.js** (jeśli chcesz korzystać z CLI lokalnie, a nie przez kontener).
+- (Opcjonalnie) **Node.js** jeśli chcesz korzystać z CLI lokalnie.
 
----
+## Szybki Start
 
-## 🚀 Szybki Start
-
-1. Przejdź do katalogu backendu:
-   cd health-finder/backend
-
-2. Utwórz plik `.env` (jeśli go nie ma) i skonfiguruj zmienne (wzoruj się na poniższym przykładzie):
-   DB_HOST=postgres
-   DB_PORT=5432
-   DB_USERNAME=admin
-   DB_PASSWORD=tajnehaslo
-   DB_DATABASE=gym_db
-   PORT=3000
-
-3. Uruchom środowisko (API + Baza Danych):
-   docker-compose up --build
+1. Skopiuj przykładowy plik konfiguracyjny:
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
    
-   *Flagę `--build` dodajemy przy pierwszym uruchomieniu lub po zmianie w `package.json`.*
+   Możesz edytować `.env` w razie potrzeby (domyślne wartości działają z docker-compose).
 
-4. Aplikacja dostępna jest pod adresem: http://localhost:3000
+2. Uruchom środowisko (Frontend + Backend + Baza Danych):
+   ```bash
+   docker-compose up --build
+   ```
+   
+   Flagę `--build` dodajemy przy pierwszym uruchomieniu lub po zmianach w `package.json`.
 
----
+3. Aplikacje są dostępne pod adresami:
+   - **Frontend**: http://localhost:5173
+   - **Backend API**: http://localhost:3000
 
-## 🛠 Generowanie kodu (Nest CLI)
 
-Ponieważ używamy Docker Volumes, pliki wygenerowane wewnątrz kontenera pojawią się automatycznie na Twoim dysku (i odwrotnie).
+## Testy
 
-### Metoda 1: Przez Docker (Zalecane - nie wymaga Node.js lokalnie)
-Uruchom komendę wewnątrz działającego kontenera `api`:
+Backend zawiera testy jednostkowe oraz funkcjonalne:
 
-# Przykład: Generowanie nowego zasobu (Moduł + Controller + Service + Entity)
-docker-compose exec api nest g resource modules/nazwa-modulu
+* **Testy jednostkowe** - każdy moduł posiada własne pliki testów (*.spec.ts)
+* **Testy funkcjonalne (E2E)** - znajdują się w katalogu `backend/test/`
 
-### Metoda 2: Lokalnie (Jeśli masz Node.js)
-Użyj `npx`, aby wywołać CLI bez instalacji globalnej:
+Uruchamianie testów:
 
-npx nest g resource modules/nazwa-modulu
+```bash
+# Testy jednostkowe
+cd backend
+npm run test
 
----
+# Testy funkcjonalne (E2E)
+npm run test:e2e
 
-## 🗂 Struktura Projektu (Package by Feature)
+# Testy funkcjonalne konkretnego modułu
+npm run test:e2e user-management
+```
 
-Projekt podzielony jest na moduły funkcjonalne:
+## Struktura Projektu
 
-* **src/app.module.ts** - Główny moduł spinający.
-* **src/database/** - Konfiguracja TypeORM i połączenia z PostgreSQL.
-* **src/common/** - Elementy współdzielone (Enumy, Dekoratory, Filtry wyjątków).
-* **src/modules/** - Logika biznesowa:
-    * `user-management` (Użytkownicy, Trenerzy, Klienci, Auth)
-    * `scheduling` (Harmonogram, Treningi, Okna Czasowe)
-    * `facilities` (Infrastruktura: Siłownie, Sale)
-    * `engagement` (Opinie, Formularze)
+Projekt podzielony jest na:
 
----
+* **backend/** - API NestJS
+  * **src/database/** - Konfiguracja TypeORM i połączenia z PostgreSQL
+  * **src/common/** - Elementy współdzielone (Enumy, Serwisy)
+  * **src/modules/** - Logika biznesowa (user-management, scheduling, facilities, engagement)
 
-## 🔌 Dostęp do Bazy Danych
+* **frontend/** - Aplikacja React
+  * **src/pages/** - Strony aplikacji
+  * **src/components/** - Komponenty UI
+  * **src/lib/** - Serwisy komunikacji z API
 
-Możesz połączyć się z bazą danych używając klienta SQL (np. DBeaver, PgAdmin, DataGrip):
+## Dostęp do Bazy Danych
+
+Połączenie za pomocą klienta SQL (DBeaver, PgAdmin, DataGrip):
 
 * **Host:** localhost
 * **Port:** 5432
-* **Użytkownik:** admin (lub wg .env)
-* **Hasło:** tajnehaslo (lub wg .env)
+* **Użytkownik:** admin
+* **Hasło:** tajnehaslo
 * **Baza:** gym_db
 
----
-
-## 📝 Przydatne komendy
+## Przydatne komendy
 
 | Komenda | Opis |
 | :--- | :--- |
-| `docker-compose up` | Uruchamia serwer i bazę (widoczne logi). |
-| `docker-compose up -d` | Uruchamia serwer w tle. |
-| `docker-compose down` | Zatrzymuje i usuwa kontenery. |
-| `docker-compose down -v` | Zatrzymuje kontenery i **usuwa wolumen bazy danych** (tracisz dane!). |
-| `docker logs -f gym-backend` | Podgląd logów aplikacji API na żywo. |
+| `docker-compose up` | Uruchamia wszystkie serwisy (widoczne logi) |
+| `docker-compose up -d` | Uruchamia serwisy w tle |
+| `docker-compose down` | Zatrzymuje i usuwa kontenery |
+| `docker-compose down -v` | Zatrzymuje kontenery i usuwa wolumeny (tracisz dane!) |
+| `docker-compose logs -f api` | Podgląd logów backendu na żywo |
+| `docker-compose logs -f frontend` | Podgląd logów frontendu na żywo |
